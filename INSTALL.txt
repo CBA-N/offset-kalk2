@@ -1,0 +1,173 @@
+================================================================
+  KALKULATOR DRUKU OFFSETOWEGO v1.3 - INSTRUKCJA INSTALACJI
+================================================================
+
+🎉 WERSJA CZYSTA (CLEAN) - GOTOWA DO URUCHOMIENIA
+📦 23 pliki (65 KB zip, 296 KB rozpakowane)
+
+================================================================
+  SZYBKI START (30 SEKUND)
+================================================================
+
+1. Rozpakuj:
+   unzip kalkulator_v1.3_clean.zip
+   cd kalkulator_v1.3_clean
+
+2. Zainstaluj:
+   pip install flask requests
+
+3. Uruchom:
+   python3 app.py
+
+4. Otwórz:
+   http://127.0.0.1:7018
+
+Gotowe! 🎊
+
+================================================================
+  CO JEST W ŚRODKU
+================================================================
+
+✅ 8 modułów Python (logika aplikacji)
+✅ 7 szablonów HTML (interfejs użytkownika)
+✅ 3 pliki JSON (bazy danych)
+✅ 1 plik requirements.txt (zależności)
+✅ 1 plik README.md (dokumentacja)
+
+BRAK:
+❌ Plików testowych
+❌ Backupów
+❌ Logów
+❌ Starych wersji
+
+================================================================
+  NOWOŚCI W WERSJI 1.3
+================================================================
+
+✂️ CIĘCIE PAPIERU Z B1:
+   • Checkbox w formularzu: "Papier wymaga cięcia z B1"
+   • Automatyczna kalkulacja kosztu
+   • Panel konfiguracji w Słowniki → Cięcie Papieru
+
+📐 ELASTYCZNE JEDNOSTKI:
+   • Sztukowa: 150 PLN / 1000 ark
+   • Metrowa: 200 PLN / 1 m²
+   • Wagowa: 50 PLN / 1 kg
+   • Edycja w Słowniki → Uszlachetnienia/Obróbka
+
+================================================================
+  PIERWSZE KROKI PO URUCHOMIENIU
+================================================================
+
+1. TEST CIĘCIA PAPIERU:
+   • Formularz → Nakład: 1000
+   • Format: 90×50mm (wizytówki)
+   • ✅ Zaznacz: "Papier wymaga cięcia z B1"
+   • Kliknij "Oblicz wycenę"
+   • Sprawdź: Koszt cięcia w wynikach
+
+2. TEST JEDNOSTEK:
+   • Słowniki → Uszlachetnienia → Edytuj "Lakier UV"
+   • Typ jednostki: Metrowa
+   • Jednostka: "1 m²"
+   • Cena: 200 PLN
+   • Zapisz
+
+3. KONFIGURACJA CIĘCIA:
+   • Słowniki → Cięcie Papieru
+   • Zmień roboczogodzinę (domyślnie 60 PLN)
+   • Zmień wydajność (domyślnie 500 ark/h)
+   • Zapisz
+
+================================================================
+  STRUKTURA KATALOGÓW
+================================================================
+
+kalkulator_v1.3_clean/
+│
+├── app.py                  ← Start tutaj! (główna aplikacja)
+├── kalkulator_druku_v2.py  ← Logika cięcia i jednostek
+├── slowniki_manager.py     ← Manager cięcia
+├── slowniki_data.json      ← Baza danych (WAŻNE!)
+│
+├── templates/              ← Interfejs użytkownika
+│   ├── index.html          ← Formularz z checkboxem cięcia
+│   └── slowniki.html       ← Panel z zakładką cięcia
+│
+└── README.md               ← Pełna dokumentacja
+
+================================================================
+  WYMAGANIA SYSTEMOWE
+================================================================
+
+Python:        3.7+
+Flask:         2.0.0+
+Requests:      2.28.0+
+System:        Linux / macOS / Windows
+Przeglądarka:  Chrome / Firefox / Edge / Safari
+
+================================================================
+  DOSTĘPNE STRONY
+================================================================
+
+📊 Kalkulator:    http://127.0.0.1:7018/
+📚 Słowniki:      http://127.0.0.1:7018/slowniki
+📜 Historia:      http://127.0.0.1:7018/historia
+👥 Kontrahenci:   http://127.0.0.1:7018/kontrahenci
+
+================================================================
+  ROZWIĄZYWANIE PROBLEMÓW
+================================================================
+
+Problem: Port 7018 zajęty
+Rozwiązanie:
+  1. Sprawdź: lsof -i :7018
+  2. Zabij proces: kill -9 <PID>
+  3. Lub zmień port w app.py
+
+Problem: Brak modułu Flask
+Rozwiązanie:
+  pip install flask requests
+
+Problem: Błąd przy uruchomieniu
+Rozwiązanie:
+  1. Sprawdź Python: python3 --version
+  2. Sprawdź pip: pip --version
+  3. Zainstaluj ponownie: pip install -r requirements.txt
+
+Problem: Pusta lista uszlachetnień
+Rozwiązanie:
+  Sprawdź plik slowniki_data.json - musi istnieć!
+
+================================================================
+  WERSJA I AUTORZY
+================================================================
+
+Wersja:        1.3 CLEAN
+Data:          2025-10-24
+Status:        Production Ready
+Typ:           Czysty pakiet produkcyjny
+
+Historia:
+  v1.0 (2025-10-17) - Podstawowy kalkulator
+  v1.1 (2025-10-17) - Historia ofert
+  v1.2 (2025-10-17) - Kontrahenci + VAT
+  v1.3 (2025-10-24) - Cięcie + Jednostki ✨
+
+================================================================
+  KONTAKT I WSPARCIE
+================================================================
+
+Dokumentacja:  README.md
+Logi:          server.log (po uruchomieniu)
+Dane:          slowniki_data.json
+
+W razie pytań sprawdź README.md lub logi aplikacji.
+
+================================================================
+
+Miłego użytkowania! 🖨️
+
+© 2025 - Kalkulator Druku Offsetowego v1.3
+
+================================================================

@@ -1,0 +1,28 @@
+# Kalkulator Druku Offsetowego v1.2
+# Wymagania Python 3.8+
+
+# Framework webowy
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# Obsługa HTTP i API
+requests==2.31.0
+urllib3==2.1.0
+
+# Obsługa dat i czasu (wbudowane w Python, ale dla pewności)
+python-dateutil==2.8.2
+
+# Obsługa JSON (wbudowane w Python)
+# json - moduł standardowy
+
+# CORS dla API (jeśli potrzebne w przyszłości)
+flask-cors==4.0.0
+
+# Walidacja danych
+jsonschema==4.20.0
+
+# Logi i debugging (opcjonalne)
+python-dotenv==1.0.0
+
+# Produkcja (opcjonalne - dla deploymentu)
+gunicorn==21.2.0

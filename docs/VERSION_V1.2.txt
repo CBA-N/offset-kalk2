@@ -1,0 +1,166 @@
+================================================================
+    KALKULATOR DRUKU OFFSETOWEGO - WERSJA 1.2
+================================================================
+
+Data wydania:        2025-10-17
+Poprzednia wersja:   1.1
+Status:              ✅ STABILNA
+
+================================================================
+    ZMIANY W WERSJI 1.2
+================================================================
+
+🆕 NOWE FUNKCJE:
+
+1. MODUŁ KONTRAHENTÓW
+   ✓ Pełny system zarządzania kontrahentami (CRUD)
+   ✓ Przechowywanie: nazwa, NIP, REGON, KRS, adres, kontakt
+   ✓ Wyszukiwanie i filtrowanie kontrahentów
+   ✓ Statystyki w czasie rzeczywistym
+   ✓ Strona /kontrahenci z interfejsem zarządzania
+
+2. INTEGRACJA Z BIAŁĄ LISTĄ VAT
+   ✓ Automatyczne pobieranie danych z API Ministerstwa Finansów
+   ✓ Walidacja NIP (algorytm sumy kontrolnej)
+   ✓ Parsowanie adresu i mapowanie województw
+   ✓ Detekcja formy prawnej
+   ✓ Status VAT i konta bankowe
+
+3. POWIĄZANIE OFERT Z KONTRAHENTAMI
+   ✓ Wybór kontrahenta w formularzu kalkulatora
+   ✓ Podgląd danych kontrahenta przed kalkulacją
+   ✓ Zapisywanie pełnej kopii danych w ofercie
+   ✓ Wyświetlanie kontrahenta w historii ofert
+   ✓ Badge kontrahenta w karcie oferty
+
+4. DUPLIKOWANIE Z KONTRAHENTEM
+   ✓ Funkcja duplikowania zachowuje wybranego kontrahenta
+   ✓ Możliwość zmiany kontrahenta w duplikacie
+
+5. NOWA NAWIGACJA
+   ✓ Dodany link "Kontrahenci" w menu głównym
+   ✓ Bezpośredni dostęp z każdej strony
+
+================================================================
+    ZMIANY TECHNICZNE
+================================================================
+
+BACKEND:
+  • kontrahenci_manager.py (203 linie) - manager CRUD
+  • biala_lista_vat.py (311 linii) - klient API VAT
+  • app.py - 10 nowych endpointów API
+  • kalkulator_druku_v2.py - dodano pola kontrahent_id, kontrahent
+  • kontrahenci.json - nowy plik danych
+
+FRONTEND:
+  • templates/kontrahenci.html (575 linii) - nowa strona
+  • templates/index.html - dodano sekcję kontrahenta
+  • templates/historia.html - wyświetlanie kontrahenta
+  • templates/base.html - zaktualizowana nawigacja
+
+API ENDPOINTS:
+  • GET    /kontrahenci
+  • GET    /api/kontrahenci
+  • GET    /api/kontrahenci/<id>
+  • POST   /api/kontrahenci
+  • PUT    /api/kontrahenci/<id>
+  • DELETE /api/kontrahenci/<id>
+  • GET    /api/kontrahenci/szukaj?q=
+  • GET    /api/kontrahenci/statystyki
+  • GET    /api/vat/waliduj-nip/<nip>
+  • GET    /api/vat/pobierz/<nip>
+
+================================================================
+    STATYSTYKI
+================================================================
+
+Pliki kodu:           8 (5 backend + 3 frontend)
+Linie kodu backend:   ~650 nowych linii
+Linie kodu frontend:  ~700 nowych linii
+Nowe endpointy:       10
+Nowe pola dataclass:  2 (kontrahent_id, kontrahent)
+Testów wykonanych:    8 integracyjnych
+
+================================================================
+    KOMPATYBILNOŚĆ
+================================================================
+
+✅ Wsteczna kompatybilność z v1.1:
+   • Stare oferty (bez kontrahenta) działają normalnie
+   • Historia pokazuje badge v1.0/v1.1/v1.2
+   • Duplikowanie starych ofert umożliwia dodanie kontrahenta
+
+✅ Zgodność z RODO:
+   • Funkcja anonimizacji kontrahentów
+   • Możliwość usunięcia danych
+
+================================================================
+    WYMAGANIA SYSTEMOWE
+================================================================
+
+Python:        3.7+
+Flask:         2.0+
+Biblioteki:    requests, dataclasses (built-in)
+Internet:      Wymagany dla API Białej Listy VAT
+Przeglądarka:  Chrome 90+, Firefox 88+, Edge 90+
+
+================================================================
+    DANE TESTOWE
+================================================================
+
+System zawiera 3 przykładowych kontrahentów:
+  1. Drukarnia TEST Sp. z o.o. (Warszawa)
+  2. Wydawnictwo DEMO (Kraków)
+  3. ABC Print House (Poznań)
+
+Plik: kontrahenci.json
+
+================================================================
+    ZNANE OGRANICZENIA
+================================================================
+
+• Statystyki miast - pokazują "Nieznane" (do poprawy)
+• Brak cache dla API VAT (każde zapytanie → API MF)
+• Brak retry mechanism dla błędów API
+• Brak automatycznych backupów kontrahenci.json
+• Brak eksportu/importu CSV
+
+================================================================
+    PLANOWANE W v1.3
+================================================================
+
+□ Automatyczne backup kontrahentów
+□ Eksport do CSV/Excel
+□ Import z CSV
+□ Cache API VAT (Redis)
+□ Retry mechanism
+□ Historia zmian kontrahenta (audit log)
+□ Filtrowanie ofert po kontrahencie
+□ Raporty współpracy
+□ Wykres wartości per kontrahent
+□ Email notifications
+
+================================================================
+    DOKUMENTACJA
+================================================================
+
+• PLAN_V1.2_KONTRAHENCI.md
+• IMPLEMENTACJA_V1.2_PODSUMOWANIE.md
+• INSTRUKCJA_UZYTKOWNIKA_V1.2.md
+• VERSION_V1.2.txt (ten plik)
+
+================================================================
+    AUTORZY
+================================================================
+
+Implementacja:  Genspark AI Assistant
+Data:           2025-10-17
+Czas impl.:     ~3 godziny
+
+================================================================
+
+Poprzednie wersje:
+  v1.1 - Pełne dane kalkulacji w historii + duplikowanie
+  v1.0 - System bazowy (kalkulator + słowniki + historia)
+
+================================================================

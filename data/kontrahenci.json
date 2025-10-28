@@ -1,0 +1,62 @@
+[
+    {
+        "id": 1,
+        "nazwa": "Drukarnia TEST Sp. z o.o.",
+        "nip": "1234563218",
+        "regon": "123456789",
+        "krs": "0000123456",
+        "forma_prawna": "Sp. z o.o.",
+        "adres": {
+            "ulica": "ul. Przykładowa 10",
+            "kod_pocztowy": "00-001",
+            "miasto": "Warszawa",
+            "wojewodztwo": "mazowieckie"
+        },
+        "email": "kontakt@drukarnia-test.pl",
+        "telefon": "+48 22 123 45 67",
+        "osoba_kontaktowa": "Jan Kowalski",
+        "uwagi": "Stały klient - rabat 10%",
+        "data_dodania": "2025-10-17T10:30:00",
+        "ostatnia_modyfikacja": "2025-10-17T10:30:00"
+    },
+    {
+        "id": 2,
+        "nazwa": "Wydawnictwo DEMO",
+        "nip": "9876543210",
+        "regon": "987654321",
+        "krs": "",
+        "forma_prawna": "JDG",
+        "adres": {
+            "ulica": "ul. Testowa 5",
+            "kod_pocztowy": "31-000",
+            "miasto": "Kraków",
+            "wojewodztwo": "małopolskie"
+        },
+        "email": "biuro@wydawnictwo-demo.pl",
+        "telefon": "+48 12 987 65 43",
+        "osoba_kontaktowa": "Anna Nowak",
+        "uwagi": "",
+        "data_dodania": "2025-10-17T11:00:00",
+        "ostatnia_modyfikacja": "2025-10-17T11:00:00"
+    },
+    {
+        "id": 3,
+        "nazwa": "ABC Print House",
+        "nip": "5555555555",
+        "regon": "",
+        "krs": "",
+        "forma_prawna": "JDG",
+        "adres": {
+            "ulica": "al. Główna 100",
+            "kod_pocztowy": "60-000",
+            "miasto": "Poznań",
+            "wojewodztwo": "wielkopolskie"
+        },
+        "email": "info@abc-print.pl",
+        "telefon": "+48 61 555 55 55",
+        "osoba_kontaktowa": "Piotr Wiśniewski",
+        "uwagi": "Nowy klient - oferta próbna",
+        "data_dodania": "2025-10-17T14:20:00",
+        "ostatnia_modyfikacja": "2025-10-17T14:20:00"
+    }
+]

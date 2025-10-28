@@ -1,0 +1,881 @@
+{% extends "base.html" %}
+
+{% block title %}Kalkulator Druku - Strona Główna{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="text-center mb-4">
+        <h1><i class="fas fa-print text-primary"></i> Kalkulator Druku Offsetowego</h1>
+        <p class="lead text-muted">Automatyczna kalkulacja z optymalizacją formatu arkusza</p>
+    </div>
+
+    <form id="kalkulatorForm">
+        <!-- Sekcja 1: Dane podstawowe -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Dane Podstawowe
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Nazwa produktu</label>
+                        <input type="text" class="form-control" name="nazwa_produktu" value="Mój wydruk" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Nakład (szt)</label>
+                        <input type="number" class="form-control" name="naklad" value="1000" min="1" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-tag"></i> Rodzaj pracy (opcjonalnie - wypełni wymiary)
+                        </label>
+                        <select class="form-select" id="rodzajPracy">
+                            <option value="">-- Wybierz gotowy szablon lub wpisz wymiary ręcznie --</option>
+                            {% for nazwa, dane in rodzaje_prac.items() %}
+                            <option value="{{ nazwa }}" data-w="{{ dane.szerokosc }}" data-h="{{ dane.wysokosc }}">
+                                {{ nazwa }} ({{ dane.szerokosc }}×{{ dane.wysokosc }} mm) - {{ dane.opis }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Szerokość (mm)</label>
+                        <input type="number" class="form-control" name="format_szerokosc" value="210" min="10" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Wysokość (mm)</label>
+                        <input type="number" class="form-control" name="format_wysokosc" value="297" min="10" required>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-sm btn-outline-secondary format-btn" data-w="90" data-h="50">Wizytówka (90×50)</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary format-btn" data-w="210" data-h="297">A4 (210×297)</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary format-btn" data-w="148" data-h="210">A5 (148×210)</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary format-btn" data-w="420" data-h="594">A2 (420×594)</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary format-btn" data-w="100" data-h="150">Etykieta (100×150)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja 2: Kontrahent -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-building"></i> Kontrahent (opcjonalnie)
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label">Wybierz kontrahenta</label>
+                        <select class="form-select" id="kontrahent_id" name="kontrahent_id">
+                            <option value="">-- Bez kontrahenta --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">&nbsp;</label>
+                        <a href="/kontrahenci" class="btn btn-success w-100" target="_blank">
+                            <i class="fas fa-plus"></i> Zarządzaj kontrahentami
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Podgląd wybranego kontrahenta -->
+                <div id="kontrahentPodglad" class="alert alert-info" style="display: none;">
+                    <h6><i class="fas fa-user-tie"></i> Wybrany kontrahent:</h6>
+                    <div id="kontrahentDane"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja 3: Materiał -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-file"></i> Materiał
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">1. Kategoria papieru</label>
+                        <select class="form-select" id="kategoriaPapieru" required>
+                            <option value="">-- Wybierz kategorię --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">2. Rodzaj papieru</label>
+                        <select class="form-select" name="rodzaj_papieru" id="rodzajPapieru" required disabled>
+                            <option value="">-- Najpierw wybierz kategorię --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">3. Gramatura (g/m²)</label>
+                        <select class="form-select" name="gramatura" id="gramatura" required disabled>
+                            <option value="">-- Wybierz papier --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Kolorystyka</label>
+                        <select class="form-select" name="kolorystyka" required>
+                            <option value="4+0">4+0 (jednostronny)</option>
+                            <option value="4+4">4+4 (dwustronny)</option>
+                            <option value="4+1">4+1 (4 kolory + 1 kolor)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ilość form drukowych</label>
+                        <input type="number" class="form-control" name="ilosc_form" value="4" min="1" max="8" required>
+                    </div>
+                </div>
+                
+                <!-- Cięcie papieru z B1 -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="wymagaCiecia" 
+                                   name="wymaga_ciecia_papieru" checked>
+                            <label class="form-check-label" for="wymagaCiecia">
+                                <i class="fas fa-cut"></i> Papier wymaga cięcia z arkuszy B1 (700×1000mm)
+                                <small class="text-muted d-block">Odznacz jeśli papier jest już docięty do formatu drukarskiego</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja 4: Kolory specjalne -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-palette"></i> Kolory Specjalne (opcjonalnie)
+            </div>
+            <div class="card-body">
+                <div id="kolorySpecjalne">
+                    {% for nazwa in kolory_spec.keys() %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="kolory_specjalne" value="{{ nazwa }}" id="kolor_{{ loop.index }}">
+                        <label class="form-check-label" for="kolor_{{ loop.index }}">
+                            {{ nazwa }} <span class="badge bg-info">{{ kolory_spec[nazwa]['koszt_za_kolor'] }} PLN</span>
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja 5: Uszlachetnienia -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-star"></i> Uszlachetnienia (opcjonalnie)
+            </div>
+            <div class="card-body">
+                <div id="uszlachetnienia" class="row">
+                    {% for nazwa in uszlachetnienia.keys() %}
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="uszlachetnienia" value="{{ nazwa }}" id="uszlach_{{ loop.index }}">
+                            <label class="form-check-label" for="uszlach_{{ loop.index }}">
+                                {{ nazwa }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja 6: Obróbka -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cut"></i> Obróbka Wykończeniowa (opcjonalnie)
+            </div>
+            <div class="card-body">
+                <div id="obrobka" class="row">
+                    {% for nazwa in obrobka.keys() %}
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="obrobka" value="{{ nazwa }}" id="obrobka_{{ loop.index }}">
+                            <label class="form-check-label" for="obrobka_{{ loop.index }}">
+                                {{ nazwa }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja 7: Pakowanie i transport -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-box"></i> Pakowanie i Transport
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Pakowanie</label>
+                        <select class="form-select" name="pakowanie">
+                            {% for nazwa in pakowanie.keys() %}
+                            <option value="{{ nazwa }}">{{ nazwa }} ({{ pakowanie[nazwa]['cena'] }} PLN)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Transport</label>
+                        <select class="form-select" name="transport">
+                            {% for nazwa in transport.keys() %}
+                            <option value="{{ nazwa }}">{{ nazwa }} ({{ transport[nazwa]['cena'] }} PLN)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja 8: Marża i optymalizacja -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cog"></i> Konfiguracja Wyceny
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Marża (%)</label>
+                        <input type="number" class="form-control" name="marza_procent" value="20" min="0" max="100" step="0.1" required>
+                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-secondary marza-btn" data-value="10">10%</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary marza-btn" data-value="20">20%</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary marza-btn" data-value="30">30%</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary marza-btn" data-value="35">35%</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Priorytet optymalizacji</label>
+                        <select class="form-select" name="priorytet_optymalizacji">
+                            {% for nazwa in priorytety.keys() %}
+                            <option value="{{ nazwa }}">{{ nazwa }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Przycisk kalkulacji -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-calculator"></i> Oblicz Cenę
+            </button>
+        </div>
+    </form>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Ładowanie...</span>
+        </div>
+        <p class="mt-2">Kalkuluję ofertę...</p>
+    </div>
+
+    <!-- Wyniki -->
+    <div class="result-box" id="wyniki"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // === ŁADOWANIE KONTRAHENTÓW ===
+    function zaladujKontrahentow() {
+        $.get('/api/kontrahenci', function(response) {
+            const $select = $('#kontrahent_id');
+            $select.html('<option value="">-- Bez kontrahenta --</option>');
+            
+            if (response.success && response.kontrahenci) {
+                response.kontrahenci.forEach(function(k) {
+                    $select.append(`<option value="${k.id}">${k.nazwa} (${k.nip || 'brak NIP'})</option>`);
+                });
+            }
+        }).fail(function() {
+            console.error('Błąd ładowania kontrahentów');
+        });
+    }
+    
+    zaladujKontrahentow();
+    
+    // === PODGLĄD KONTRAHENTA ===
+    $('#kontrahent_id').change(function() {
+        const kontrahentId = $(this).val();
+        
+        if (!kontrahentId) {
+            $('#kontrahentPodglad').hide();
+            return;
+        }
+        
+        $.get('/api/kontrahenci/' + kontrahentId, function(response) {
+            if (!response.success || !response.kontrahent) return;
+            const k = response.kontrahent;
+            let html = `
+                <p class="mb-1"><strong>Nazwa:</strong> ${k.nazwa}</p>
+                ${k.nip ? `<p class="mb-1"><strong>NIP:</strong> ${k.nip}</p>` : ''}
+                ${k.adres && k.adres.miasto ? `<p class="mb-1"><strong>Miasto:</strong> ${k.adres.miasto}</p>` : ''}
+                ${k.email ? `<p class="mb-1"><strong>Email:</strong> ${k.email}</p>` : ''}
+                ${k.telefon ? `<p class="mb-0"><strong>Telefon:</strong> ${k.telefon}</p>` : ''}
+            `;
+            $('#kontrahentDane').html(html);
+            $('#kontrahentPodglad').slideDown();
+        });
+    });
+    
+    // === FUNKCJA DUPLIKOWANIA - Wypełnij formularz z parametrów URL ===
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.has('duplikat_z')) {
+        const duplikatId = urlParams.get('duplikat_z');
+        
+        // Wypełnij pola formularza
+        if (urlParams.has('nazwa_produktu')) {
+            $('#nazwaProduktu').val(urlParams.get('nazwa_produktu'));
+        }
+        
+        if (urlParams.has('format_szerokosc') && urlParams.has('format_wysokosc')) {
+            $('input[name="format_szerokosc"]').val(urlParams.get('format_szerokosc'));
+            $('input[name="format_wysokosc"]').val(urlParams.get('format_wysokosc'));
+        }
+        
+        if (urlParams.has('naklad')) {
+            $('#naklad').val(urlParams.get('naklad'));
+        }
+        
+        // Obsługa wyboru papieru z URL (dla duplikowania)
+        if (urlParams.has('rodzaj_papieru')) {
+            const rodzajPapieru = urlParams.get('rodzaj_papieru');
+            const gramaturaValue = urlParams.get('gramatura');
+            
+            // Poczekaj aż załadują się kategorie, potem znajdź odpowiednią kategorię
+            setTimeout(() => {
+                $.get('/api/papiery-kategorie', function(data) {
+                    // Znajdź kategorię dla tego papieru
+                    let znalezionaKategoria = null;
+                    for (let kat in data.papiery) {
+                        const papiery = data.papiery[kat];
+                        if (papiery.some(p => p.nazwa === rodzajPapieru)) {
+                            znalezionaKategoria = kat;
+                            break;
+                        }
+                    }
+                    
+                    if (znalezionaKategoria) {
+                        // Ustaw kategorię
+                        $('#kategoriaPapieru').val(znalezionaKategoria).trigger('change');
+                        
+                        // Poczekaj na załadowanie papierów, potem ustaw papier
+                        setTimeout(() => {
+                            $('#rodzajPapieru').val(rodzajPapieru).trigger('change');
+                            
+                            // Poczekaj na załadowanie gramatur, potem ustaw gramaturę
+                            if (gramaturaValue) {
+                                setTimeout(() => {
+                                    $('#gramatura').val(gramaturaValue);
+                                }, 300);
+                            }
+                        }, 300);
+                    }
+                });
+            }, 500);
+        }
+        
+        if (urlParams.has('kolorystyka')) {
+            $('#kolorystyka').val(urlParams.get('kolorystyka'));
+        }
+        
+        // Listy (kolory specjalne, uszlachetnienia, obróbka)
+        if (urlParams.has('kolory_specjalne')) {
+            try {
+                const kolory = JSON.parse(urlParams.get('kolory_specjalne'));
+                kolory.forEach(kolor => {
+                    $('#kolorySpecjalne option[value="' + kolor + '"]').prop('selected', true);
+                });
+            } catch (e) {}
+        }
+        
+        if (urlParams.has('uszlachetnienia')) {
+            try {
+                const uszl = JSON.parse(urlParams.get('uszlachetnienia'));
+                uszl.forEach(u => {
+                    $('#uszlachetnienia option[value="' + u + '"]').prop('selected', true);
+                });
+            } catch (e) {}
+        }
+        
+        if (urlParams.has('obrobka')) {
+            try {
+                const obrobka = JSON.parse(urlParams.get('obrobka'));
+                obrobka.forEach(o => {
+                    $('#obrobka option[value="' + o + '"]').prop('selected', true);
+                });
+            } catch (e) {}
+        }
+        
+        if (urlParams.has('pakowanie')) {
+            $('#pakowanie').val(urlParams.get('pakowanie'));
+        }
+        
+        if (urlParams.has('transport')) {
+            $('#transport').val(urlParams.get('transport'));
+        }
+        
+        if (urlParams.has('marza_procent')) {
+            $('#marzaProcent').val(urlParams.get('marza_procent'));
+        }
+        
+        if (urlParams.has('priorytet_optymalizacji')) {
+            $('#priorytetOptymalizacji').val(urlParams.get('priorytet_optymalizacji'));
+        }
+        
+        // Kontrahent
+        if (urlParams.has('kontrahent_id')) {
+            setTimeout(() => {
+                $('#kontrahent_id').val(urlParams.get('kontrahent_id')).trigger('change');
+            }, 300);
+        }
+        
+        // Pokaż komunikat
+        setTimeout(() => {
+            const alertHtml = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-copy"></i> <strong>Załadowano dane z oferty #${duplikatId}</strong> — 
+                    Możesz teraz edytować parametry i wygenerować nową ofertę.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('#kalkulatorForm').prepend(alertHtml);
+        }, 300);
+    }
+    
+    
+    // Szybkie przyciski formatu
+    $('.format-btn').click(function() {
+        $('input[name="format_szerokosc"]').val($(this).data('w'));
+        $('input[name="format_wysokosc"]').val($(this).data('h'));
+    });
+    
+    // Dropdown rodzaju pracy - autofill wymiarów
+    $('#rodzajPracy').change(function() {
+        const selected = $(this).find(':selected');
+        const w = selected.data('w');
+        const h = selected.data('h');
+        
+        if (w && h) {
+            $('input[name="format_szerokosc"]').val(w);
+            $('input[name="format_wysokosc"]').val(h);
+            
+            // Opcjonalnie: zaktualizuj nazwę produktu
+            const rodzajNazwa = selected.val();
+            if (rodzajNazwa && $('input[name="nazwa_produktu"]').val() === 'Mój wydruk') {
+                $('input[name="nazwa_produktu"]').val(rodzajNazwa);
+            }
+        }
+    });
+    
+    // Szybkie przyciski marży
+    $('.marza-btn').click(function() {
+        $('input[name="marza_procent"]').val($(this).data('value'));
+    });
+    
+    // === KASKADOWY WYBÓR PAPIERÓW (3 KROKI) ===
+    let papieryData = null;
+    
+    // 1. Załaduj kategorie papierów
+    function zaladujKategoriePapierow() {
+        $.get('/api/papiery-kategorie', function(data) {
+            papieryData = data.papiery;
+            const $kategoria = $('#kategoriaPapieru');
+            $kategoria.html('<option value="">-- Wybierz kategorię --</option>');
+            
+            data.kategorie.forEach(function(kat) {
+                $kategoria.append(`<option value="${kat}">${kat}</option>`);
+            });
+        }).fail(function() {
+            console.error('Błąd ładowania kategorii papierów');
+        });
+    }
+    
+    zaladujKategoriePapierow();
+    
+    // 2. Po wyborze kategorii - załaduj papiery z tej kategorii
+    $('#kategoriaPapieru').change(function() {
+        const kategoria = $(this).val();
+        const $rodzaj = $('#rodzajPapieru');
+        const $gramatura = $('#gramatura');
+        
+        // Reset pól
+        $rodzaj.html('<option value="">-- Najpierw wybierz kategorię --</option>').prop('disabled', true);
+        $gramatura.html('<option value="">-- Wybierz papier --</option>').prop('disabled', true);
+        
+        if (!kategoria || !papieryData || !papieryData[kategoria]) {
+            return;
+        }
+        
+        // Wypełnij listę papierów z wybranej kategorii
+        $rodzaj.html('<option value="">-- Wybierz papier --</option>');
+        papieryData[kategoria].forEach(function(papier) {
+            $rodzaj.append(`<option value="${papier.nazwa}">${papier.nazwa}</option>`);
+        });
+        $rodzaj.prop('disabled', false);
+    });
+    
+    // 3. Po wyborze papieru - załaduj gramatury
+    $('#rodzajPapieru').change(function() {
+        const rodzaj = $(this).val();
+        const $gramatura = $('#gramatura');
+        
+        // Reset pola gramatur
+        $gramatura.html('<option value="">-- Wybierz papier --</option>').prop('disabled', true);
+        
+        if (!rodzaj) {
+            return;
+        }
+        
+        // Pobierz gramatury dla wybranego papieru
+        $.get('/api/gramatury/' + encodeURIComponent(rodzaj), function(data) {
+            $gramatura.html('');
+            data.gramatury.forEach(function(g) {
+                const cena = data.ceny[g] ? data.ceny[g].toFixed(2) : '0.00';
+                $gramatura.append(`<option value="${g}">${g} g/m² (${cena} PLN/kg)</option>`);
+            });
+            $gramatura.prop('disabled', false);
+        }).fail(function() {
+            console.error('Błąd ładowania gramatur');
+        });
+    });
+    
+    // Obsługa formularza
+    $('#kalkulatorForm').submit(function(e) {
+        e.preventDefault();
+        
+        // Pokaż spinner
+        $('#loadingSpinner').show();
+        $('#wyniki').hide();
+        
+        // Zbierz dane
+        const formData = {};
+        $(this).serializeArray().forEach(function(item) {
+            if (formData[item.name]) {
+                if (Array.isArray(formData[item.name])) {
+                    formData[item.name].push(item.value);
+                } else {
+                    formData[item.name] = [formData[item.name], item.value];
+                }
+            } else {
+                formData[item.name] = item.value;
+            }
+        });
+        
+        // Checkboxy jako tablice
+        formData.kolory_specjalne = [];
+        $('input[name="kolory_specjalne"]:checked').each(function() {
+            formData.kolory_specjalne.push($(this).val());
+        });
+        
+        formData.uszlachetnienia = [];
+        $('input[name="uszlachetnienia"]:checked').each(function() {
+            formData.uszlachetnienia.push($(this).val());
+        });
+        
+        formData.obrobka = [];
+        $('input[name="obrobka"]:checked').each(function() {
+            formData.obrobka.push($(this).val());
+        });
+        
+        // Kontrahent - konwertuj na int lub null
+        const kontrahentId = $('#kontrahent_id').val();
+        formData.kontrahent_id = kontrahentId ? parseInt(kontrahentId) : null;
+        
+        // Cięcie papieru z B1
+        formData.wymaga_ciecia_papieru = $('#wymagaCiecia').is(':checked');
+        
+        // Wyślij zapytanie
+        $.ajax({
+            url: '/api/kalkuluj',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    wyswietlWynik(response.wynik);
+                } else {
+                    alert('Błąd: ' + response.error);
+                }
+                $('#loadingSpinner').hide();
+            },
+            error: function(xhr) {
+                alert('Błąd kalkulacji: ' + (xhr.responseJSON?.error || 'Nieznany błąd'));
+                $('#loadingSpinner').hide();
+            }
+        });
+    });
+    
+    function wyswietlWynik(wynik) {
+        const format = wynik.wybrany_format;
+        
+        let html = `
+            <h3 class="text-center mb-4"><i class="fas fa-check-circle text-success"></i> Oferta Wyceny</h3>
+            
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h3><i class="fas fa-receipt"></i></h3>
+                        <h3>${wynik.cena_brutto_vat23.toFixed(2)} PLN</h3>
+                        <p>Cena brutto (VAT 23%)</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h3><i class="fas fa-file-alt"></i></h3>
+                        <h3>${format.format_name}</h3>
+                        <p>Wybrany format arkusza</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h3><i class="fas fa-layer-group"></i></h3>
+                        <h3>${format.uzytki_na_ark}</h3>
+                        <p>Użytków na arkuszu</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <h3><i class="fas fa-percent"></i></h3>
+                        <h3>${format.wykorzystanie_procent.toFixed(1)}%</h3>
+                        <p>Wykorzystanie materiału</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-4 offset-md-4">
+                    <div class="stat-card">
+                        <h3><i class="fas fa-copy"></i></h3>
+                        <h3>${format.ilosc_arkuszy}</h3>
+                        <p>Ilość arkuszy</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">Szczegóły Kalkulacji</div>
+                <div class="card-body">
+                    <table class="table">
+                        <tr>
+                            <td><strong>Produkt:</strong></td>
+                            <td>${wynik.nazwa_produktu}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Format wydruku:</strong></td>
+                            <td>${wynik.format_wydruku_mm[0]}×${wynik.format_wydruku_mm[1]} mm</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Nakład:</strong></td>
+                            <td>${wynik.naklad} szt</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Papier:</strong></td>
+                            <td>${wynik.rodzaj_papieru} ${wynik.gramatura}g/m²</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Format arkusza:</strong></td>
+                            <td>${format.format_name} (${format.szerokosc}×${format.wysokosc} mm, orientacja ${format.orientacja})</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Odpady:</strong></td>
+                            <td>${format.odpady_procent.toFixed(1)}%</td>
+                        </tr>
+                    </table>
+                    
+                    <hr>
+                    
+                    <h5>Koszty:</h5>
+                    <table class="table table-sm">
+                        <tr><td>Papier:</td><td class="text-end">${wynik.koszt_papieru.toFixed(2)} PLN</td></tr>
+                        <tr><td>Druk:</td><td class="text-end">${wynik.koszt_druku.toFixed(2)} PLN</td></tr>
+                        ${wynik.koszt_ciecia_papieru && wynik.koszt_ciecia_papieru > 0 ? `<tr><td><i class="fas fa-cut"></i> Cięcie papieru z B1:</td><td class="text-end">${wynik.koszt_ciecia_papieru.toFixed(2)} PLN</td></tr>` : ''}
+                        ${wynik.koszt_kolorow_spec > 0 ? `<tr><td>Kolory specjalne:</td><td class="text-end">${wynik.koszt_kolorow_spec.toFixed(2)} PLN</td></tr>` : ''}
+                        ${wynik.koszt_uszlachetnien > 0 ? `<tr><td>Uszlachetnienia:</td><td class="text-end">${wynik.koszt_uszlachetnien.toFixed(2)} PLN</td></tr>` : ''}
+                        ${wynik.koszt_obrobki > 0 ? `<tr><td>Obróbka:</td><td class="text-end">${wynik.koszt_obrobki.toFixed(2)} PLN</td></tr>` : ''}
+                        ${wynik.koszt_pakowania > 0 ? `<tr><td>Pakowanie:</td><td class="text-end">${wynik.koszt_pakowania.toFixed(2)} PLN</td></tr>` : ''}
+                        ${wynik.koszt_transportu > 0 ? `<tr><td>Transport:</td><td class="text-end">${wynik.koszt_transportu.toFixed(2)} PLN</td></tr>` : ''}
+                        <tr class="table-active"><td><strong>Suma kosztów:</strong></td><td class="text-end"><strong>${wynik.suma_kosztow_netto.toFixed(2)} PLN</strong></td></tr>
+                        <tr><td>Marża (${wynik.marza_procent}%):</td><td class="text-end">${(wynik.cena_z_marza_netto - wynik.suma_kosztow_netto).toFixed(2)} PLN</td></tr>
+                        <tr class="table-active"><td><strong>Cena netto:</strong></td><td class="text-end"><strong>${wynik.cena_z_marza_netto.toFixed(2)} PLN</strong></td></tr>
+                        <tr><td>VAT 23%:</td><td class="text-end">${(wynik.cena_brutto_vat23 - wynik.cena_z_marza_netto).toFixed(2)} PLN</td></tr>
+                        <tr class="table-success"><td><strong>CENA BRUTTO:</strong></td><td class="text-end"><strong>${wynik.cena_brutto_vat23.toFixed(2)} PLN</strong></td></tr>
+                    </table>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><i class="fas fa-clock"></i> <strong>Czas realizacji:</strong> ${wynik.czas_realizacji_h.toFixed(1)} godz</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><i class="fas fa-weight"></i> <strong>Waga:</strong> ${wynik.waga_kg.toFixed(2)} kg</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Alternatywne formaty
+        if (wynik.alternatywne_formaty && wynik.alternatywne_formaty.length > 0) {
+            html += `
+                <div class="card mt-3">
+                    <div class="card-header">Propozycje Alternatywne</div>
+                    <div class="card-body">
+                        <div class="row">
+            `;
+            
+            wynik.alternatywne_formaty.slice(0, 3).forEach(function(alt, idx) {
+                html += `
+                    <div class="col-md-4 mb-2">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6>${alt.format_name}</h6>
+                                <p class="mb-1"><small>Użytki: ${alt.uzytki_na_ark}</small></p>
+                                <p class="mb-1"><small>Wykorzystanie: ${alt.wykorzystanie_procent.toFixed(1)}%</small></p>
+                                <p class="mb-0"><small>Koszt papieru: ${alt.koszt_papieru.toFixed(2)} PLN</small></p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        $('#wyniki').html(html).slideDown();
+        
+        // Scroll do wyników
+        $('html, body').animate({
+            scrollTop: $('#wyniki').offset().top - 100
+        }, 500);
+    }
+    
+    // === AUTOMATYCZNY CACHE FORMULARZA ===
+    
+    function zapiszFormularzDoCache() {
+        const formData = {
+            nazwa_produktu: $('[name="nazwa_produktu"]').val(),
+            naklad: $('[name="naklad"]').val(),
+            rodzaj_pracy: $('#rodzajPracy').val(),  // Dodane: rodzaj pracy
+            format_szerokosc: $('[name="format_szerokosc"]').val(),
+            format_wysokosc: $('[name="format_wysokosc"]').val(),
+            rodzaj_papieru: $('[name="rodzaj_papieru"]').val(),
+            gramatura: $('[name="gramatura"]').val(),
+            kolorystyka: $('[name="kolorystyka"]').val(),
+            ilosc_form: $('[name="ilosc_form"]').val(),
+            pakowanie: $('[name="pakowanie"]').val(),
+            transport: $('[name="transport"]').val(),
+            marza_procent: $('[name="marza_procent"]').val(),
+            priorytet_optymalizacji: $('[name="priorytet_optymalizacji"]').val(),
+            kontrahent_id: $('#kontrahent_id').val(),
+            
+            // Checkboxy
+            kolory_specjalne: $('input[name="kolory_specjalne"]:checked').map(function() { return $(this).val(); }).get(),
+            uszlachetnienia: $('input[name="uszlachetnienia"]:checked').map(function() { return $(this).val(); }).get(),
+            obrobka: $('input[name="obrobka"]:checked').map(function() { return $(this).val(); }).get(),
+            wymaga_ciecia_papieru: $('#wymagaCiecia').is(':checked')
+        };
+        
+        localStorage.setItem('kalkulatorFormCache', JSON.stringify(formData));
+    }
+    
+    function wczytajFormularzZCache() {
+        const cachedData = localStorage.getItem('kalkulatorFormCache');
+        if (!cachedData) return;
+        
+        try {
+            const formData = JSON.parse(cachedData);
+            
+            // Pola tekstowe i numeryczne
+            if (formData.nazwa_produktu) $('[name="nazwa_produktu"]').val(formData.nazwa_produktu);
+            if (formData.naklad) $('[name="naklad"]').val(formData.naklad);
+            if (formData.rodzaj_pracy) $('#rodzajPracy').val(formData.rodzaj_pracy);  // Dodane: rodzaj pracy
+            if (formData.format_szerokosc) $('[name="format_szerokosc"]').val(formData.format_szerokosc);
+            if (formData.format_wysokosc) $('[name="format_wysokosc"]').val(formData.format_wysokosc);
+            if (formData.rodzaj_papieru) $('[name="rodzaj_papieru"]').val(formData.rodzaj_papieru).trigger('change');
+            if (formData.gramatura) {
+                // Poczekaj aż gramatury się załadują
+                setTimeout(function() {
+                    $('[name="gramatura"]').val(formData.gramatura);
+                }, 200);
+            }
+            if (formData.kolorystyka) $('[name="kolorystyka"]').val(formData.kolorystyka);
+            if (formData.ilosc_form) $('[name="ilosc_form"]').val(formData.ilosc_form);
+            if (formData.pakowanie) $('[name="pakowanie"]').val(formData.pakowanie);
+            if (formData.transport) $('[name="transport"]').val(formData.transport);
+            if (formData.marza_procent) $('[name="marza_procent"]').val(formData.marza_procent);
+            if (formData.priorytet_optymalizacji) $('[name="priorytet_optymalizacji"]').val(formData.priorytet_optymalizacji);
+            if (formData.kontrahent_id) $('#kontrahent_id').val(formData.kontrahent_id).trigger('change');
+            
+            // Checkboxy
+            $('input[name="kolory_specjalne"]').prop('checked', false);
+            if (formData.kolory_specjalne) {
+                formData.kolory_specjalne.forEach(function(val) {
+                    $('input[name="kolory_specjalne"][value="' + val + '"]').prop('checked', true);
+                });
+            }
+            
+            $('input[name="uszlachetnienia"]').prop('checked', false);
+            if (formData.uszlachetnienia) {
+                formData.uszlachetnienia.forEach(function(val) {
+                    $('input[name="uszlachetnienia"][value="' + val + '"]').prop('checked', true);
+                });
+            }
+            
+            $('input[name="obrobka"]').prop('checked', false);
+            if (formData.obrobka) {
+                formData.obrobka.forEach(function(val) {
+                    $('input[name="obrobka"][value="' + val + '"]').prop('checked', true);
+                });
+            }
+            
+            // Checkbox cięcia papieru
+            if (formData.wymaga_ciecia_papieru !== undefined) {
+                $('#wymagaCiecia').prop('checked', formData.wymaga_ciecia_papieru);
+            }
+            
+            console.log('Formularz wczytany z cache');
+        } catch (e) {
+            console.error('Błąd wczytywania cache formularza:', e);
+        }
+    }
+    
+    // Wczytaj cache przy starcie
+    wczytajFormularzZCache();
+    
+    // Zapisuj przy każdej zmianie
+    $('#kalkulatorForm input, #kalkulatorForm select').on('change input', function() {
+        zapiszFormularzDoCache();
+    });
+    
+    // Opcjonalnie: wyczyść cache po udanej kalkulacji (wyłączone - zachowujemy dane)
+    // $('#kalkulatorForm').on('submit', function() {
+    //     setTimeout(function() {
+    //         localStorage.removeItem('kalkulatorFormCache');
+    //     }, 1000);
+    // });
+});
+</script>
+{% endblock %}

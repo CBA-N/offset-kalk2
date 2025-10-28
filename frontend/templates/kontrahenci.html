@@ -1,0 +1,597 @@
+{% extends "base.html" %}
+
+{% block title %}Kontrahenci - Kalkulator Druku{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-building"></i> Zarządzanie Kontrahentami</h2>
+                <button class="btn btn-primary" onclick="otworzModalDodaj()">
+                    <i class="fas fa-plus"></i> Nowy kontrahent
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statystyki -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5>Wszyscy kontrahenci</h5>
+                    <h2 id="stat-total">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5>Z NIP</h5>
+                    <h2 id="stat-z-nip">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5>Bez NIP</h5>
+                    <h2 id="stat-bez-nip">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5>Liczba miast</h5>
+                    <h2 id="stat-miasta">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wyszukiwanie -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" id="searchInput" class="form-control" 
+                       placeholder="Szukaj (nazwa, NIP, miasto, email...)"
+                       onkeyup="szukajKontrahentow()">
+            </div>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-outline-secondary" onclick="wyswietlWszystkich()">
+                <i class="fas fa-list"></i> Pokaż wszystkich
+            </button>
+        </div>
+    </div>
+
+    <!-- Lista kontrahentów -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list"></i> Lista kontrahentów</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Tabela -->
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="tabelaKontrahentow">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nazwa</th>
+                                    <th>NIP</th>
+                                    <th>Miasto</th>
+                                    <th>Email</th>
+                                    <th>Telefon</th>
+                                    <th>Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaKontrahentow">
+                                <!-- Dynamicznie ładowane -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pusty stan -->
+                    <div id="pustystan" style="display:none;" class="text-center py-5">
+                        <i class="fas fa-building fa-4x text-muted mb-3"></i>
+                        <h4>Brak kontrahentów</h4>
+                        <p class="text-muted">Dodaj pierwszego kontrahenta klikając przycisk "Nowy kontrahent"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal dodawania/edycji kontrahenta -->
+<div class="modal fade" id="kontrahentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="kontrahentModalTitle">Nowy kontrahent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="kontrahentForm">
+                    <input type="hidden" id="kontrahent_id" name="id">
+                    
+                    <!-- Sekcja 1: Dane podstawowe -->
+                    <h6 class="mb-3"><i class="fas fa-building"></i> Dane podstawowe</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="nazwa" class="form-label">Nazwa firmy / Imię i nazwisko *</label>
+                            <input type="text" class="form-control" id="nazwa" name="nazwa" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="nip" class="form-label">NIP</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="nip" name="nip" 
+                                       placeholder="XXX-XXX-XX-XX" maxlength="13">
+                                <button type="button" class="btn btn-success" onclick="pobierzZVAT()" 
+                                        id="btnPobierzVAT" title="Pobierz dane z Białej Listy VAT">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">10 cyfr</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="regon" class="form-label">REGON</label>
+                            <input type="text" class="form-control" id="regon" name="regon" maxlength="14">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="krs" class="form-label">KRS</label>
+                            <input type="text" class="form-control" id="krs" name="krs" maxlength="10">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="forma_prawna" class="form-label">Forma prawna</label>
+                            <input type="text" class="form-control" id="forma_prawna" name="forma_prawna" 
+                                   placeholder="np. Sp. z o.o.">
+                        </div>
+                    </div>
+                    
+                    <!-- Spinner ładowania VAT -->
+                    <div id="vatLoading" style="display:none;" class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> Pobieranie danych z Białej Listy VAT...
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Sekcja 2: Adres -->
+                    <h6 class="mb-3"><i class="fas fa-map-marker-alt"></i> Adres</h6>
+                    
+                    <div class="mb-3">
+                        <label for="adres_ulica" class="form-label">Ulica i numer</label>
+                        <input type="text" class="form-control" id="adres_ulica" name="adres_ulica" 
+                               placeholder="ul. Przykładowa 10">
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="adres_kod" class="form-label">Kod pocztowy</label>
+                            <input type="text" class="form-control" id="adres_kod" name="adres_kod" 
+                                   placeholder="00-000" maxlength="6">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="adres_miasto" class="form-label">Miasto</label>
+                            <input type="text" class="form-control" id="adres_miasto" name="adres_miasto">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="adres_wojewodztwo" class="form-label">Województwo</label>
+                            <select class="form-select" id="adres_wojewodztwo" name="adres_wojewodztwo">
+                                <option value="">-- Wybierz --</option>
+                                <option value="dolnośląskie">Dolnośląskie</option>
+                                <option value="kujawsko-pomorskie">Kujawsko-pomorskie</option>
+                                <option value="lubelskie">Lubelskie</option>
+                                <option value="lubuskie">Lubuskie</option>
+                                <option value="łódzkie">Łódzkie</option>
+                                <option value="małopolskie">Małopolskie</option>
+                                <option value="mazowieckie">Mazowieckie</option>
+                                <option value="opolskie">Opolskie</option>
+                                <option value="podkarpackie">Podkarpackie</option>
+                                <option value="podlaskie">Podlaskie</option>
+                                <option value="pomorskie">Pomorskie</option>
+                                <option value="śląskie">Śląskie</option>
+                                <option value="świętokrzyskie">Świętokrzyskie</option>
+                                <option value="warmińsko-mazurskie">Warmińsko-mazurskie</option>
+                                <option value="wielkopolskie">Wielkopolskie</option>
+                                <option value="zachodniopomorskie">Zachodniopomorskie</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Sekcja 3: Kontakt -->
+                    <h6 class="mb-3"><i class="fas fa-phone"></i> Kontakt</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="telefon" class="form-label">Telefon</label>
+                            <input type="tel" class="form-control" id="telefon" name="telefon" 
+                                   placeholder="+48 123 456 789">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="osoba_kontaktowa" class="form-label">Osoba kontaktowa</label>
+                        <input type="text" class="form-control" id="osoba_kontaktowa" name="osoba_kontaktowa" 
+                               placeholder="Imię i nazwisko">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="uwagi" class="form-label">Uwagi</label>
+                        <textarea class="form-control" id="uwagi" name="uwagi" rows="3" 
+                                  placeholder="Dodatkowe informacje o kontrahencie..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-primary" onclick="zapiszKontrahenta()">
+                    <i class="fas fa-save"></i> Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal szczegółów kontrahenta -->
+<div class="modal fade" id="szczegolyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Szczegóły kontrahenta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="szczegolyContent">
+                <!-- Dynamicznie ładowane -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+                <button type="button" class="btn btn-primary" onclick="edytujKontrahentaZSzczegolow()">
+                    <i class="fas fa-edit"></i> Edytuj
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let kontrahenci = [];
+let aktualnyKontrahent = null;
+
+// Inicjalizacja
+$(document).ready(function() {
+    zaladujKontrahentow();
+    zaladujStatystyki();
+});
+
+function zaladujKontrahentow() {
+    $.get('/api/kontrahenci', function(data) {
+        if (data.success) {
+            kontrahenci = data.kontrahenci;
+            renderujTabele();
+        }
+    }).fail(function() {
+        alert('Błąd ładowania kontrahentów');
+    });
+}
+
+function zaladujStatystyki() {
+    $.get('/api/kontrahenci/statystyki', function(data) {
+        if (data.success) {
+            const stats = data.statystyki;
+            $('#stat-total').text(stats.liczba_kontrahentow);
+            $('#stat-z-nip').text(stats.z_nip);
+            $('#stat-bez-nip').text(stats.bez_nip);
+            $('#stat-miasta').text(stats.miasta.length);
+        }
+    });
+}
+
+function renderujTabele() {
+    const tbody = $('#listaKontrahentow');
+    tbody.empty();
+    
+    if (kontrahenci.length === 0) {
+        $('#tabelaKontrahentow').hide();
+        $('#pustystan').show();
+        return;
+    }
+    
+    $('#tabelaKontrahentow').show();
+    $('#pustystan').hide();
+    
+    kontrahenci.forEach(k => {
+        const tr = $('<tr>');
+        tr.append(`<td>${k.id}</td>`);
+        tr.append(`<td><strong>${k.nazwa || '-'}</strong></td>`);
+        tr.append(`<td>${k.nip || '-'}</td>`);
+        tr.append(`<td>${(k.adres && k.adres.miasto) || '-'}</td>`);
+        tr.append(`<td>${k.email || '-'}</td>`);
+        tr.append(`<td>${k.telefon || '-'}</td>`);
+        tr.append(`
+            <td>
+                <button class="btn btn-sm btn-info" onclick="pokazSzczegoly(${k.id})" title="Szczegóły">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-warning" onclick="edytujKontrahenta(${k.id})" title="Edytuj">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="usunKontrahenta(${k.id})" title="Usuń">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `);
+        tbody.append(tr);
+    });
+}
+
+function otworzModalDodaj() {
+    $('#kontrahentModalTitle').text('Nowy kontrahent');
+    $('#kontrahentForm')[0].reset();
+    $('#kontrahent_id').val('');
+    aktualnyKontrahent = null;
+    $('#kontrahentModal').modal('show');
+}
+
+function edytujKontrahenta(id) {
+    aktualnyKontrahent = kontrahenci.find(k => k.id === id);
+    if (!aktualnyKontrahent) return;
+    
+    $('#kontrahentModalTitle').text('Edytuj kontrahenta');
+    
+    // Wypełnij formularz
+    $('#kontrahent_id').val(aktualnyKontrahent.id);
+    $('#nazwa').val(aktualnyKontrahent.nazwa || '');
+    $('#nip').val(aktualnyKontrahent.nip || '');
+    $('#regon').val(aktualnyKontrahent.regon || '');
+    $('#krs').val(aktualnyKontrahent.krs || '');
+    $('#forma_prawna').val(aktualnyKontrahent.forma_prawna || '');
+    
+    // Adres - obsługa obu formatów (płaski i zagnieżdżony)
+    const adres = aktualnyKontrahent.adres || {};
+    $('#adres_ulica').val(adres.ulica || aktualnyKontrahent.adres_ulica || '');
+    $('#adres_kod').val(adres.kod_pocztowy || aktualnyKontrahent.adres_kod || '');
+    $('#adres_miasto').val(adres.miasto || aktualnyKontrahent.adres_miasto || '');
+    $('#adres_wojewodztwo').val(adres.wojewodztwo || aktualnyKontrahent.adres_wojewodztwo || '');
+    
+    $('#email').val(aktualnyKontrahent.email || '');
+    $('#telefon').val(aktualnyKontrahent.telefon || '');
+    $('#osoba_kontaktowa').val(aktualnyKontrahent.osoba_kontaktowa || '');
+    $('#uwagi').val(aktualnyKontrahent.uwagi || '');
+    
+    $('#kontrahentModal').modal('show');
+}
+
+function zapiszKontrahenta() {
+    // Zbierz dane z formularza
+    const dane = {
+        nazwa: $('#nazwa').val(),
+        nip: $('#nip').val(),
+        regon: $('#regon').val(),
+        krs: $('#krs').val(),
+        forma_prawna: $('#forma_prawna').val(),
+        adres: {
+            ulica: $('#adres_ulica').val(),
+            kod_pocztowy: $('#adres_kod').val(),
+            miasto: $('#adres_miasto').val(),
+            wojewodztwo: $('#adres_wojewodztwo').val()
+        },
+        email: $('#email').val(),
+        telefon: $('#telefon').val(),
+        osoba_kontaktowa: $('#osoba_kontaktowa').val(),
+        uwagi: $('#uwagi').val()
+    };
+    
+    // Walidacja
+    if (!dane.nazwa) {
+        alert('Podaj nazwę kontrahenta!');
+        return;
+    }
+    
+    const id = $('#kontrahent_id').val();
+    
+    if (id) {
+        // Edycja
+        $.ajax({
+            url: '/api/kontrahenci/' + id,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(dane),
+            success: function(response) {
+                if (response.success) {
+                    $('#kontrahentModal').modal('hide');
+                    zaladujKontrahentow();
+                    zaladujStatystyki();
+                    alert('✅ Kontrahent zaktualizowany!');
+                }
+            },
+            error: function() {
+                alert('❌ Błąd podczas zapisywania');
+            }
+        });
+    } else {
+        // Dodawanie
+        $.ajax({
+            url: '/api/kontrahenci',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(dane),
+            success: function(response) {
+                if (response.success) {
+                    $('#kontrahentModal').modal('hide');
+                    zaladujKontrahentow();
+                    zaladujStatystyki();
+                    alert('✅ Kontrahent dodany!');
+                }
+            },
+            error: function() {
+                alert('❌ Błąd podczas zapisywania');
+            }
+        });
+    }
+}
+
+function usunKontrahenta(id) {
+    const kontrahent = kontrahenci.find(k => k.id === id);
+    if (!kontrahent) return;
+    
+    if (!confirm(`Czy na pewno usunąć kontrahenta:\n${kontrahent.nazwa}?`)) return;
+    
+    $.ajax({
+        url: '/api/kontrahenci/' + id,
+        method: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                zaladujKontrahentow();
+                zaladujStatystyki();
+                alert('✅ Kontrahent usunięty');
+            }
+        },
+        error: function() {
+            alert('❌ Błąd podczas usuwania');
+        }
+    });
+}
+
+function pokazSzczegoly(id) {
+    aktualnyKontrahent = kontrahenci.find(k => k.id === id);
+    if (!aktualnyKontrahent) return;
+    
+    const k = aktualnyKontrahent;
+    
+    let html = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="fas fa-building"></i> Dane podstawowe</h6>
+                <p><strong>Nazwa:</strong> ${k.nazwa || '-'}</p>
+                <p><strong>NIP:</strong> ${k.nip || '-'}</p>
+                <p><strong>REGON:</strong> ${k.regon || '-'}</p>
+                <p><strong>KRS:</strong> ${k.krs || '-'}</p>
+                <p><strong>Forma prawna:</strong> ${k.forma_prawna || '-'}</p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-map-marker-alt"></i> Adres</h6>
+                <p>${(k.adres && k.adres.ulica) || ''}<br>
+                   ${(k.adres && k.adres.kod_pocztowy) || ''} ${(k.adres && k.adres.miasto) || ''}<br>
+                   ${(k.adres && k.adres.wojewodztwo) || ''}</p>
+                
+                <h6 class="mt-3"><i class="fas fa-phone"></i> Kontakt</h6>
+                <p><strong>Email:</strong> ${k.email || '-'}<br>
+                   <strong>Telefon:</strong> ${k.telefon || '-'}<br>
+                   <strong>Osoba kontaktowa:</strong> ${k.osoba_kontaktowa || '-'}</p>
+            </div>
+        </div>
+        
+        ${k.uwagi ? `<hr><h6><i class="fas fa-comment"></i> Uwagi</h6><p>${k.uwagi}</p>` : ''}
+        
+        <hr>
+        <small class="text-muted">
+            Dodano: ${k.data_dodania ? new Date(k.data_dodania).toLocaleString('pl-PL') : '-'}<br>
+            Ostatnia modyfikacja: ${k.ostatnia_modyfikacja ? new Date(k.ostatnia_modyfikacja).toLocaleString('pl-PL') : '-'}
+        </small>
+    `;
+    
+    $('#szczegolyContent').html(html);
+    $('#szczegolyModal').modal('show');
+}
+
+function edytujKontrahentaZSzczegolow() {
+    $('#szczegolyModal').modal('hide');
+    if (aktualnyKontrahent) {
+        edytujKontrahenta(aktualnyKontrahent.id);
+    }
+}
+
+function szukajKontrahentow() {
+    const fraza = $('#searchInput').val();
+    
+    if (!fraza) {
+        zaladujKontrahentow();  // Załaduj wszystkich ponownie gdy search pusty
+        return;
+    }
+    
+    $.get('/api/kontrahenci/szukaj', { q: fraza }, function(data) {
+        if (data.success) {
+            kontrahenci = data.kontrahenci;
+            renderujTabele();
+        }
+    });
+}
+
+function wyswietlWszystkich() {
+    $('#searchInput').val('');
+    zaladujKontrahentow();
+}
+
+// === INTEGRACJA BIAŁA LISTA VAT ===
+
+function pobierzZVAT() {
+    const nip = $('#nip').val().replace(/\-/g, '').replace(/\s/g, '');
+    
+    if (!nip || nip.length !== 10) {
+        alert('Podaj poprawny 10-cyfrowy NIP!');
+        return;
+    }
+    
+    $('#vatLoading').show();
+    $('#btnPobierzVAT').prop('disabled', true);
+    
+    $.get('/api/vat/pobierz/' + nip, function(response) {
+        $('#vatLoading').hide();
+        $('#btnPobierzVAT').prop('disabled', false);
+        
+        if (response.success && response.dane) {
+            const data = response.dane;
+            const adres = data.adres || {};
+            
+            // Wypełnij formularz danymi z VAT
+            $('#nazwa').val(data.nazwa || '');
+            $('#nip').val(data.nip || '');
+            $('#regon').val(data.regon || '');
+            $('#krs').val(data.krs || '');
+            $('#forma_prawna').val(data.forma_prawna || '');
+            
+            // Adres
+            $('#adres_ulica').val(adres.ulica || '');
+            $('#adres_kod').val(adres.kod_pocztowy || '');
+            $('#adres_miasto').val(adres.miasto || '');
+            $('#adres_wojewodztwo').val(adres.wojewodztwo || '');
+            
+            // Dodaj info o statusie VAT do uwag
+            let uwagi = $('#uwagi').val();
+            if (data.status_vat) {
+                uwagi += (uwagi ? '\n' : '') + 'Status VAT: ' + data.status_vat;
+            }
+            if (data.konta_bankowe && data.konta_bankowe.length > 0) {
+                uwagi += '\nKonta: ' + data.konta_bankowe.join(', ');
+            }
+            $('#uwagi').val(uwagi);
+            
+            alert('✅ Dane pobrane z Białej Listy VAT!\n\nZweryfikuj dane i uzupełnij kontakt (email, telefon).');
+        } else {
+            alert('❌ ' + (response.error || 'Nie znaleziono podmiotu w rejestrze VAT'));
+        }
+    }).fail(function() {
+        $('#vatLoading').hide();
+        $('#btnPobierzVAT').prop('disabled', false);
+        alert('❌ Błąd połączenia z API Białej Listy VAT');
+    });
+}
+</script>
+
+{% endblock %}

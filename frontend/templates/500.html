@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Błąd serwera{% endblock %}
+
+{% block content %}
+<div class="main-container text-center" style="padding: 100px 20px;">
+    <i class="fas fa-server fa-5x text-danger mb-4"></i>
+    <h1 class="display-4">500</h1>
+    <h2>Błąd serwera</h2>
+    <p class="lead text-muted mb-4">Przepraszamy, wystąpił problem z serwerem. Spróbuj ponownie później.</p>
+    <a href="/" class="btn btn-primary btn-lg">
+        <i class="fas fa-home"></i> Wróć na stronę główną
+    </a>
+</div>
+{% endblock %}

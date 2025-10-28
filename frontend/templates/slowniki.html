@@ -1,0 +1,1313 @@
+{% extends "base.html" %}
+
+{% block title %}Edytor Słowników - Kalkulator Druku{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="text-center mb-4">
+        <h1><i class="fas fa-book text-primary"></i> Edytor Słowników</h1>
+        <p class="lead text-muted">Zarządzaj cennikami i parametrami systemu</p>
+    </div>
+
+    <!-- Zakładki -->
+    <ul class="nav nav-tabs mb-4" id="slownikTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="papiery-tab" data-bs-toggle="tab" data-bs-target="#papiery" type="button">
+                <i class="fas fa-file-alt"></i> Papiery
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="uszlachetnienia-tab" data-bs-toggle="tab" data-bs-target="#uszlachetnienia" type="button">
+                <i class="fas fa-star"></i> Uszlachetnienia
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="obrobka-tab" data-bs-toggle="tab" data-bs-target="#obrobka" type="button">
+                <i class="fas fa-cut"></i> Obróbka
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="kolory-tab" data-bs-toggle="tab" data-bs-target="#kolory" type="button">
+                <i class="fas fa-palette"></i> Kolory Specjalne
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pakowanie-tab" data-bs-toggle="tab" data-bs-target="#pakowanie" type="button">
+                <i class="fas fa-box"></i> Pakowanie
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="transport-tab" data-bs-toggle="tab" data-bs-target="#transport" type="button">
+                <i class="fas fa-truck"></i> Transport
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="rodzaje-tab" data-bs-toggle="tab" data-bs-target="#rodzaje" type="button">
+                <i class="fas fa-tag"></i> Rodzaje Prac
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ciecie-tab" data-bs-toggle="tab" data-bs-target="#ciecie" type="button">
+                <i class="fas fa-cut"></i> Cięcie Papieru
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="stawki-tab" data-bs-toggle="tab" data-bs-target="#stawki" type="button">
+                <i class="fas fa-coins"></i> Stawki Drukarni
+            </button>
+        </li>
+    </ul>
+
+    <!-- Zawartość zakładek -->
+    <div class="tab-content" id="slownikTabContent">
+        <!-- Papiery -->
+        <div class="tab-pane fade show active" id="papiery" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Rodzaje Papierów</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzPapieru()">
+                        <i class="fas fa-plus"></i> Dodaj Papier
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaPapierow"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Uszlachetnienia -->
+        <div class="tab-pane fade" id="uszlachetnienia" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Rodzaje Uszlachetnień</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzUszlachetnienia()">
+                        <i class="fas fa-plus"></i> Dodaj Uszlachetnienie
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaUszlachetnien"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Obróbka -->
+        <div class="tab-pane fade" id="obrobka" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Operacje Obróbki</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzObrobki()">
+                        <i class="fas fa-plus"></i> Dodaj Operację
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaObrobki"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolory specjalne -->
+        <div class="tab-pane fade" id="kolory" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Kolory Specjalne</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzKoloru()">
+                        <i class="fas fa-plus"></i> Dodaj Kolor
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaKolorow"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pakowanie -->
+        <div class="tab-pane fade" id="pakowanie" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Opcje Pakowania</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzPakowania()">
+                        <i class="fas fa-plus"></i> Dodaj Pakowanie
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaPakowania"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transport -->
+        <div class="tab-pane fade" id="transport" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Opcje Transportu</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzTransportu()">
+                        <i class="fas fa-plus"></i> Dodaj Transport
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaTransportu"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rodzaje Prac -->
+        <div class="tab-pane fade" id="rodzaje" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Rodzaje Prac (szablony formatów)</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzRodzajuPracy()">
+                        <i class="fas fa-plus"></i> Dodaj Rodzaj Pracy
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaRodzajowPrac"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cięcie papieru -->
+        <div class="tab-pane fade" id="ciecie" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-cut"></i> Parametry Cięcia Papieru z Arkuszy B1</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted"><i class="fas fa-info-circle"></i> 
+                        Konfiguracja kosztów i parametrów cięcia papieru zakupionego w formacie B1 (700×1000mm) 
+                        do formatu arkusza drukarskiego.
+                    </p>
+                    <form id="formCiecie" class="mt-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fas fa-coins"></i> Koszt roboczogodziny [PLN]</label>
+                                <input type="number" class="form-control" id="ciecieRoboczogodzina" step="0.01" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fas fa-tachometer-alt"></i> Wydajność [arkuszy/h]</label>
+                                <input type="number" class="form-control" id="ciecieWydajnosc" step="1" required>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fas fa-wrench"></i> Koszt przygotowania maszyny [PLN]</label>
+                                <input type="number" class="form-control" id="cieciePrzygotowanie" step="0.01" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><i class="fas fa-ruler-combined"></i> Wymiary zakupu B1 [mm]</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="ciecieSzerokosc" placeholder="Szerokość" readonly>
+                                    <span class="input-group-text">×</span>
+                                    <input type="number" class="form-control" id="ciecieWysokosc" placeholder="Wysokość" readonly>
+                                </div>
+                                <small class="text-muted">Standard B1: 700×1000 mm (tylko do odczytu)</small>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <button type="button" class="btn btn-primary" onclick="zapiszCiecie()">
+                                <i class="fas fa-save"></i> Zapisz Ustawienia
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stawki drukarni -->
+        <div class="tab-pane fade" id="stawki" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <span>Stawki Drukarni</span>
+                </div>
+                <div class="card-body">
+                    <div id="stawkiDrukarni"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Przycisk eksportu -->
+    <div class="text-center mt-4">
+        <button class="btn btn-primary" onclick="eksportujSlowniki()">
+            <i class="fas fa-download"></i> Eksportuj Słowniki do JSON
+        </button>
+        <button class="btn btn-info" onclick="utworzBackup()">
+            <i class="fas fa-database"></i> Utwórz Backup
+        </button>
+    </div>
+</div>
+
+<!-- Modaleuniwersalny formularz -->
+<div class="modal fade" id="formularzModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="formularzTytul">Formularz</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="formularzTresc">
+                <!-- Treść formularza będzie wstrzykiwana dynamicznie -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+                <button type="button" class="btn btn-primary" id="zapiszFormularz">Zapisz</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let slowniki = {};
+let modal = null;
+let aktualnaDane = {}; // Do przechowywania danych podczas edycji
+
+$(document).ready(function() {
+    modal = new bootstrap.Modal(document.getElementById('formularzModal'));
+    zaladujSlowniki();
+});
+
+function zaladujSlowniki() {
+    $.get('/api/slowniki', function(data) {
+        slowniki = data;
+        renderujWszystko();
+    }).fail(function(xhr) {
+        pokazBlad('Błąd ładowania słowników: ' + xhr.responseText);
+    });
+}
+
+function renderujWszystko() {
+    renderujPapiery();
+    renderujUszlachetnienia();
+    renderujObrobke();
+    renderujKolory();
+    renderujPakowanie();
+    renderujTransport();
+    renderujRodzajePrac();
+    renderujCiecie();
+    renderujStawki();
+}
+
+// ==================== PAPIERY ====================
+
+function renderujPapiery() {
+    let html = '<div class="row">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.papiery)) {
+        let gramatury = Array.isArray(dane.gramatury) ? dane.gramatury : Object.keys(dane.ceny).map(Number);
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">${nazwa}</h5>
+                        <p class="mb-1"><small><strong>Gramatury:</strong> ${gramatury.join(', ')} g/m²</small></p>
+                        <p class="mb-1"><small><strong>Liczba gramatur:</strong> ${gramatury.length}</small></p>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning" onclick='edytujPapier(${JSON.stringify(nazwa)})'>
+                                <i class="fas fa-edit"></i> Edytuj
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick='usunPapier(${JSON.stringify(nazwa)})'>
+                                <i class="fas fa-trash"></i> Usuń
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaPapierow').html(html);
+}
+
+function pokazFormularzPapieru(nazwa = null) {
+    aktualnaDane = { kategoria: 'papiery', nazwa: nazwa };
+    
+    let dane = nazwa ? slowniki.papiery[nazwa] : null;
+    let gramatury = dane ? (Array.isArray(dane.gramatury) ? dane.gramatury : Object.keys(dane.ceny).map(Number)) : [];
+    let ceny = dane ? dane.ceny : {};
+    
+    let html = `
+        <div class="mb-3">
+            <label class="form-label">Nazwa papieru</label>
+            <input type="text" class="form-control" id="form_nazwa" value="${nazwa || ''}" ${nazwa ? 'readonly' : ''}>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Gramatury (g/m²) - oddzielone przecinkami</label>
+            <input type="text" class="form-control" id="form_gramatury" 
+                   value="${gramatury.join(', ')}" placeholder="80, 90, 100, 115, 130">
+            <small class="text-muted">Przykład: 80, 90, 100, 115, 130</small>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Ceny (PLN/kg) - oddzielone przecinkami, w kolejności gramatur</label>
+            <input type="text" class="form-control" id="form_ceny" 
+                   value="${gramatury.map(g => ceny[g] || '').join(', ')}" placeholder="5.20, 5.40, 5.60, 5.80, 6.00">
+            <small class="text-muted">Przykład: 5.20, 5.40, 5.60 (tyle samo wartości co gramatur)</small>
+        </div>
+    `;
+    
+    $('#formularzTytul').text(nazwa ? `Edytuj papier: ${nazwa}` : 'Dodaj nowy papier');
+    $('#formularzTresc').html(html);
+    
+    $('#zapiszFormularz').off('click').on('click', () => zapiszPapier(nazwa));
+    modal.show();
+}
+
+function zapiszPapier(staraNazwa) {
+    let nazwa = $('#form_nazwa').val().trim();
+    let gramaturyStr = $('#form_gramatury').val().trim();
+    let cenyStr = $('#form_ceny').val().trim();
+    
+    if (!nazwa || !gramaturyStr || !cenyStr) {
+        pokazBlad('Wszystkie pola są wymagane');
+        return;
+    }
+    
+    let gramatury = gramaturyStr.split(',').map(g => parseInt(g.trim())).filter(g => !isNaN(g));
+    let ceny = cenyStr.split(',').map(c => parseFloat(c.trim())).filter(c => !isNaN(c));
+    
+    if (gramatury.length === 0 || ceny.length === 0) {
+        pokazBlad('Nieprawidłowy format gramatur lub cen');
+        return;
+    }
+    
+    if (gramatury.length !== ceny.length) {
+        pokazBlad('Liczba gramatur musi być równa liczbie cen');
+        return;
+    }
+    
+    let operacja = staraNazwa ? 'edytuj' : 'dodaj';
+    let dane = {
+        nazwa: nazwa,
+        gramatury: gramatury,
+        ceny: ceny
+    };
+    
+    if (staraNazwa) {
+        dane.stara_nazwa = staraNazwa;
+        if (staraNazwa !== nazwa) {
+            dane.nowa_nazwa = nazwa;
+        }
+    }
+    
+    wykonajOperacje('papiery', operacja, dane, () => {
+        modal.hide();
+        zaladujSlowniki();
+        pokazSukces(`Papier "${nazwa}" ${staraNazwa ? 'zaktualizowany' : 'dodany'}`);
+    });
+}
+
+function edytujPapier(nazwa) {
+    pokazFormularzPapieru(nazwa);
+}
+
+function usunPapier(nazwa) {
+    if (!confirm(`Czy na pewno usunąć papier: ${nazwa}?`)) return;
+    
+    wykonajOperacje('papiery', 'usun', { nazwa: nazwa }, () => {
+        zaladujSlowniki();
+        pokazSukces(`Papier "${nazwa}" usunięty`);
+    });
+}
+
+// ==================== USZLACHETNIENIA ====================
+
+function renderujUszlachetnienia() {
+    let html = '<div class="row">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.uszlachetnienia)) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">${nazwa}</h5>
+                        <p class="mb-1"><small><strong>Typ:</strong> ${dane.typ}</small></p>
+                        <p class="mb-1"><small><strong>Cena:</strong> ${dane.cena_pln} PLN/${dane.jednostka || '1000 ark'}</small></p>
+                        ${dane.opis ? `<p class="mb-1"><small>${dane.opis}</small></p>` : ''}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning" onclick='edytujUszlachetnienie(${JSON.stringify(nazwa)})'>
+                                <i class="fas fa-edit"></i> Edytuj
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick='usunUszlachetnienie(${JSON.stringify(nazwa)})'>
+                                <i class="fas fa-trash"></i> Usuń
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaUszlachetnien').html(html);
+}
+
+function pokazFormularzUszlachetnienia(nazwa = null) {
+    let dane = nazwa ? slowniki.uszlachetnienia[nazwa] : null;
+    
+    let html = `
+        <div class="mb-3">
+            <label class="form-label">Nazwa uszlachetnienia</label>
+            <input type="text" class="form-control" id="form_nazwa" value="${nazwa || ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Typ</label>
+            <select class="form-control" id="form_typ">
+                <option value="UV" ${dane && dane.typ === 'UV' ? 'selected' : ''}>UV</option>
+                <option value="Dyspersyjny" ${dane && dane.typ === 'Dyspersyjny' ? 'selected' : ''}>Dyspersyjny</option>
+                <option value="Folia" ${dane && dane.typ === 'Folia' ? 'selected' : ''}>Folia</option>
+                <option value="Tłoczenie" ${dane && dane.typ === 'Tłoczenie' ? 'selected' : ''}>Tłoczenie</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Cena (PLN)</label>
+            <input type="number" step="0.01" class="form-control" id="form_cena_pln" 
+                   value="${dane ? dane.cena_pln : ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Jednostka</label>
+            <input type="text" class="form-control" id="form_jednostka" 
+                   value="${dane ? dane.jednostka : '1000 ark'}">
+            <small class="text-muted">Np. "1000 ark", "1 m²", "1 kg"</small>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Typ jednostki</label>
+            <select class="form-control" id="form_typ_jednostki">
+                <option value="sztukowa" ${dane && dane.typ_jednostki === 'sztukowa' ? 'selected' : ''}>Sztukowa (za X sztuk/arkuszy)</option>
+                <option value="metrowa" ${dane && dane.typ_jednostki === 'metrowa' ? 'selected' : ''}>Metrowa (za X m²)</option>
+                <option value="wagowa" ${dane && dane.typ_jednostki === 'wagowa' ? 'selected' : ''}>Wagowa (za X kg)</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Opis (opcjonalnie)</label>
+            <textarea class="form-control" id="form_opis" rows="2">${dane ? dane.opis : ''}</textarea>
+        </div>
+    `;
+    
+    $('#formularzTytul').text(nazwa ? `Edytuj: ${nazwa}` : 'Dodaj uszlachetnienie');
+    $('#formularzTresc').html(html);
+    
+    $('#zapiszFormularz').off('click').on('click', () => zapiszUszlachetnienie(nazwa));
+    modal.show();
+}
+
+function zapiszUszlachetnienie(staraNazwa) {
+    let nazwa = $('#form_nazwa').val().trim();
+    let typ = $('#form_typ').val();
+    let cena_pln = parseFloat($('#form_cena_pln').val());
+    let jednostka = $('#form_jednostka').val().trim();
+    let typ_jednostki = $('#form_typ_jednostki').val();
+    let opis = $('#form_opis').val().trim();
+    
+    if (!nazwa || !typ || isNaN(cena_pln)) {
+        pokazBlad('Nazwa, typ i cena są wymagane');
+        return;
+    }
+    
+    let operacja = staraNazwa ? 'edytuj' : 'dodaj';
+    let dane = { nazwa, typ, cena_pln, jednostka, typ_jednostki, opis };
+    
+    if (staraNazwa) {
+        dane.stara_nazwa = staraNazwa;
+        if (staraNazwa !== nazwa) dane.nowa_nazwa = nazwa;
+    }
+    
+    wykonajOperacje('uszlachetnienia', operacja, dane, () => {
+        modal.hide();
+        zaladujSlowniki();
+        pokazSukces(`Uszlachetnienie "${nazwa}" ${staraNazwa ? 'zaktualizowane' : 'dodane'}`);
+    });
+}
+
+function edytujUszlachetnienie(nazwa) {
+    pokazFormularzUszlachetnienia(nazwa);
+}
+
+function usunUszlachetnienie(nazwa) {
+    if (!confirm(`Czy na pewno usunąć: ${nazwa}?`)) return;
+    
+    wykonajOperacje('uszlachetnienia', 'usun', { nazwa }, () => {
+        zaladujSlowniki();
+        pokazSukces(`Uszlachetnienie "${nazwa}" usunięte`);
+    });
+}
+
+// ==================== OBRÓBKA ====================
+
+function renderujObrobke() {
+    let html = '<div class="row">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.obrobka)) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">${nazwa}</h5>
+                        <p class="mb-1"><small><strong>Cena:</strong> ${dane.cena_pln} PLN/${dane.jednostka || '1000 szt'}</small></p>
+                        ${dane.opis ? `<p class="mb-1"><small>${dane.opis}</small></p>` : ''}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning" onclick='edytujObrobke(${JSON.stringify(nazwa)})'>
+                                <i class="fas fa-edit"></i> Edytuj
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick='usunObrobke(${JSON.stringify(nazwa)})'>
+                                <i class="fas fa-trash"></i> Usuń
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaObrobki').html(html);
+}
+
+function pokazFormularzObrobki(nazwa = null) {
+    let dane = nazwa ? slowniki.obrobka[nazwa] : null;
+    
+    let html = `
+        <div class="mb-3">
+            <label class="form-label">Nazwa operacji</label>
+            <input type="text" class="form-control" id="form_nazwa" value="${nazwa || ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Cena (PLN)</label>
+            <input type="number" step="0.01" class="form-control" id="form_cena_pln" 
+                   value="${dane ? dane.cena_pln : ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Jednostka</label>
+            <input type="text" class="form-control" id="form_jednostka" 
+                   value="${dane ? dane.jednostka : '1000 szt'}">
+            <small class="text-muted">Np. "1000 szt", "1 m²", "100 mb"</small>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Typ jednostki</label>
+            <select class="form-control" id="form_typ_jednostki">
+                <option value="sztukowa" ${dane && dane.typ_jednostki === 'sztukowa' ? 'selected' : ''}>Sztukowa (za X sztuk)</option>
+                <option value="metrowa" ${dane && dane.typ_jednostki === 'metrowa' ? 'selected' : ''}>Metrowa (za X m²/mb)</option>
+                <option value="wagowa" ${dane && dane.typ_jednostki === 'wagowa' ? 'selected' : ''}>Wagowa (za X kg)</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Opis (opcjonalnie)</label>
+            <textarea class="form-control" id="form-opis" rows="2">${dane ? dane.opis : ''}</textarea>
+        </div>
+    `;
+    
+    $('#formularzTytul').text(nazwa ? `Edytuj: ${nazwa}` : 'Dodaj obróbkę');
+    $('#formularzTresc').html(html);
+    
+    $('#zapiszFormularz').off('click').on('click', () => zapiszObrobke(nazwa));
+    modal.show();
+}
+
+function zapiszObrobke(staraNazwa) {
+    let nazwa = $('#form_nazwa').val().trim();
+    let cena_pln = parseFloat($('#form_cena_pln').val());
+    let jednostka = $('#form_jednostka').val().trim();
+    let typ_jednostki = $('#form_typ_jednostki').val();
+    let opis = $('#form_opis').val().trim();
+    
+    if (!nazwa || isNaN(cena_pln)) {
+        pokazBlad('Nazwa i cena są wymagane');
+        return;
+    }
+    
+    let operacja = staraNazwa ? 'edytuj' : 'dodaj';
+    let dane = { nazwa, cena_pln, jednostka, typ_jednostki, opis };
+    
+    if (staraNazwa) {
+        dane.stara_nazwa = staraNazwa;
+        if (staraNazwa !== nazwa) dane.nowa_nazwa = nazwa;
+    }
+    
+    wykonajOperacje('obrobka', operacja, dane, () => {
+        modal.hide();
+        zaladujSlowniki();
+        pokazSukces(`Obróbka "${nazwa}" ${staraNazwa ? 'zaktualizowana' : 'dodana'}`);
+    });
+}
+
+function edytujObrobke(nazwa) {
+    pokazFormularzObrobki(nazwa);
+}
+
+function usunObrobke(nazwa) {
+    if (!confirm(`Czy na pewno usunąć: ${nazwa}?`)) return;
+    
+    wykonajOperacje('obrobka', 'usun', { nazwa }, () => {
+        zaladujSlowniki();
+        pokazSukces(`Obróbka "${nazwa}" usunięta`);
+    });
+}
+
+// ==================== KOLORY SPECJALNE ====================
+
+function renderujKolory() {
+    let html = '<div class="row">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.kolory_specjalne)) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">${nazwa}</h5>
+                        <p class="mb-1"><small><strong>Cena:</strong> ${dane.cena_pln} PLN</small></p>
+                        <p class="mb-1"><small><strong>Preparat:</strong> ${dane.cena_preperatu_pln} PLN</small></p>
+                        ${dane.opis ? `<p class="mb-1"><small>${dane.opis}</small></p>` : ''}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning" onclick='edytujKolor(${JSON.stringify(nazwa)})'>
+                                <i class="fas fa-edit"></i> Edytuj
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick='usunKolor(${JSON.stringify(nazwa)})'>
+                                <i class="fas fa-trash"></i> Usuń
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaKolorow').html(html);
+}
+
+function pokazFormularzKoloru(nazwa = null) {
+    let dane = nazwa ? slowniki.kolory_specjalne[nazwa] : null;
+    
+    let html = `
+        <div class="mb-3">
+            <label class="form-label">Nazwa koloru</label>
+            <input type="text" class="form-control" id="form_nazwa" value="${nazwa || ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Cena (PLN)</label>
+            <input type="number" step="0.01" class="form-control" id="form_cena_pln" 
+                   value="${dane ? dane.cena_pln : ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Cena preparatu (PLN)</label>
+            <input type="number" step="0.01" class="form-control" id="form_cena_preperatu" 
+                   value="${dane ? dane.cena_preperatu_pln : 50.0}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Opis (opcjonalnie)</label>
+            <textarea class="form-control" id="form_opis" rows="2">${dane ? dane.opis : ''}</textarea>
+        </div>
+    `;
+    
+    $('#formularzTytul').text(nazwa ? `Edytuj: ${nazwa}` : 'Dodaj kolor specjalny');
+    $('#formularzTresc').html(html);
+    
+    $('#zapiszFormularz').off('click').on('click', () => zapiszKolor(nazwa));
+    modal.show();
+}
+
+function zapiszKolor(staraNazwa) {
+    let nazwa = $('#form_nazwa').val().trim();
+    let cena_pln = parseFloat($('#form_cena_pln').val());
+    let cena_preperatu_pln = parseFloat($('#form_cena_preperatu').val());
+    let opis = $('#form_opis').val().trim();
+    
+    if (!nazwa || isNaN(cena_pln)) {
+        pokazBlad('Nazwa i cena są wymagane');
+        return;
+    }
+    
+    let operacja = staraNazwa ? 'edytuj' : 'dodaj';
+    let dane = { nazwa, cena_pln, cena_preperatu_pln, opis };
+    
+    if (staraNazwa) {
+        dane.stara_nazwa = staraNazwa;
+        if (staraNazwa !== nazwa) dane.nowa_nazwa = nazwa;
+    }
+    
+    wykonajOperacje('kolory_specjalne', operacja, dane, () => {
+        modal.hide();
+        zaladujSlowniki();
+        pokazSukces(`Kolor "${nazwa}" ${staraNazwa ? 'zaktualizowany' : 'dodany'}`);
+    });
+}
+
+function edytujKolor(nazwa) {
+    pokazFormularzKoloru(nazwa);
+}
+
+function usunKolor(nazwa) {
+    if (!confirm(`Czy na pewno usunąć: ${nazwa}?`)) return;
+    
+    wykonajOperacje('kolory_specjalne', 'usun', { nazwa }, () => {
+        zaladujSlowniki();
+        pokazSukces(`Kolor "${nazwa}" usunięty`);
+    });
+}
+
+// ==================== PAKOWANIE ====================
+
+function renderujPakowanie() {
+    let html = '<div class="list-group">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.pakowanie)) {
+        html += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">${nazwa}</h6>
+                    <small class="text-muted">${dane.opis || 'Brak opisu'}</small>
+                    <br><small><strong>${dane.cena_pln} PLN</strong></small>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-warning" onclick='edytujPakowanie(${JSON.stringify(nazwa)})'>
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick='usunPakowanie(${JSON.stringify(nazwa)})'>
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaPakowania').html(html);
+}
+
+function pokazFormularzPakowania(nazwa = null) {
+    let dane = nazwa ? slowniki.pakowanie[nazwa] : null;
+    
+    let html = `
+        <div class="mb-3">
+            <label class="form-label">Nazwa pakowania</label>
+            <input type="text" class="form-control" id="form_nazwa" value="${nazwa || ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Cena (PLN)</label>
+            <input type="number" step="0.01" class="form-control" id="form_cena_pln" 
+                   value="${dane ? dane.cena_pln : ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Opis (opcjonalnie)</label>
+            <textarea class="form-control" id="form_opis" rows="2">${dane ? dane.opis : ''}</textarea>
+        </div>
+    `;
+    
+    $('#formularzTytul').text(nazwa ? `Edytuj: ${nazwa}` : 'Dodaj pakowanie');
+    $('#formularzTresc').html(html);
+    
+    $('#zapiszFormularz').off('click').on('click', () => zapiszPakowanie(nazwa));
+    modal.show();
+}
+
+function zapiszPakowanie(staraNazwa) {
+    let nazwa = $('#form_nazwa').val().trim();
+    let cena_pln = parseFloat($('#form_cena_pln').val());
+    let opis = $('#form_opis').val().trim();
+    
+    if (!nazwa || isNaN(cena_pln)) {
+        pokazBlad('Nazwa i cena są wymagane');
+        return;
+    }
+    
+    let operacja = staraNazwa ? 'edytuj' : 'dodaj';
+    let dane = { nazwa, cena_pln, opis };
+    
+    if (staraNazwa) {
+        dane.stara_nazwa = staraNazwa;
+        if (staraNazwa !== nazwa) dane.nowa_nazwa = nazwa;
+    }
+    
+    wykonajOperacje('pakowanie', operacja, dane, () => {
+        modal.hide();
+        zaladujSlowniki();
+        pokazSukces(`Pakowanie "${nazwa}" ${staraNazwa ? 'zaktualizowane' : 'dodane'}`);
+    });
+}
+
+function edytujPakowanie(nazwa) {
+    pokazFormularzPakowania(nazwa);
+}
+
+function usunPakowanie(nazwa) {
+    if (!confirm(`Czy na pewno usunąć: ${nazwa}?`)) return;
+    
+    wykonajOperacje('pakowanie', 'usun', { nazwa }, () => {
+        zaladujSlowniki();
+        pokazSukces(`Pakowanie "${nazwa}" usunięte`);
+    });
+}
+
+// ==================== TRANSPORT ====================
+
+function renderujTransport() {
+    let html = '<div class="list-group">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.transport)) {
+        html += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">${nazwa}</h6>
+                    <small>${dane.opis || 'Brak opisu'}</small>
+                    <br><small><strong>${dane.cena_pln} PLN</strong></small>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-warning" onclick='edytujTransport(${JSON.stringify(nazwa)})'>
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick='usunTransport(${JSON.stringify(nazwa)})'>
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaTransportu').html(html);
+}
+
+function pokazFormularzTransportu(nazwa = null) {
+    let dane = nazwa ? slowniki.transport[nazwa] : null;
+    
+    let html = `
+        <div class="mb-3">
+            <label class="form-label">Nazwa transportu</label>
+            <input type="text" class="form-control" id="form_nazwa" value="${nazwa || ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Cena (PLN)</label>
+            <input type="number" step="0.01" class="form-control" id="form_cena_pln" 
+                   value="${dane ? dane.cena_pln : ''}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Opis (opcjonalnie)</label>
+            <textarea class="form-control" id="form_opis" rows="2">${dane ? dane.opis : ''}</textarea>
+        </div>
+    `;
+    
+    $('#formularzTytul').text(nazwa ? `Edytuj: ${nazwa}` : 'Dodaj transport');
+    $('#formularzTresc').html(html);
+    
+    $('#zapiszFormularz').off('click').on('click', () => zapiszTransport(nazwa));
+    modal.show();
+}
+
+function zapiszTransport(staraNazwa) {
+    let nazwa = $('#form_nazwa').val().trim();
+    let cena_pln = parseFloat($('#form_cena_pln').val());
+    let opis = $('#form_opis').val().trim();
+    
+    if (!nazwa || isNaN(cena_pln)) {
+        pokazBlad('Nazwa i cena są wymagane');
+        return;
+    }
+    
+    let operacja = staraNazwa ? 'edytuj' : 'dodaj';
+    let dane = { nazwa, cena_pln, opis };
+    
+    if (staraNazwa) {
+        dane.stara_nazwa = staraNazwa;
+        if (staraNazwa !== nazwa) dane.nowa_nazwa = nazwa;
+    }
+    
+    wykonajOperacje('transport', operacja, dane, () => {
+        modal.hide();
+        zaladujSlowniki();
+        pokazSukces(`Transport "${nazwa}" ${staraNazwa ? 'zaktualizowany' : 'dodany'}`);
+    });
+}
+
+function edytujTransport(nazwa) {
+    pokazFormularzTransportu(nazwa);
+}
+
+function usunTransport(nazwa) {
+    if (!confirm(`Czy na pewno usunąć: ${nazwa}?`)) return;
+    
+    wykonajOperacje('transport', 'usun', { nazwa }, () => {
+        zaladujSlowniki();
+        pokazSukces(`Transport "${nazwa}" usunięty`);
+    });
+}
+
+// ==================== RODZAJE PRAC ====================
+
+function renderujRodzajePrac() {
+    const $lista = $('#listaRodzajowPrac');
+    $lista.empty();
+    
+    const rodzaje = slowniki.rodzaje_prac || {};
+    const rodzajeArray = Object.entries(rodzaje);
+    
+    if (rodzajeArray.length === 0) {
+        $lista.html('<p class="text-muted">Brak zdefiniowanych rodzajów prac</p>');
+        return;
+    }
+    
+    rodzajeArray.forEach(([nazwa, dane]) => {
+        $lista.append(`
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1"><i class="fas fa-tag"></i> ${nazwa}</h6>
+                        <p class="mb-1"><strong>Wymiary:</strong> ${dane.szerokosc} × ${dane.wysokosc} mm</p>
+                        ${dane.opis ? `<p class="mb-0 text-muted">${dane.opis}</p>` : ''}
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-warning" onclick="edytujRodzajPracy('${nazwa.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="usunRodzajPracy('${nazwa.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `);
+    });
+}
+
+function pokazFormularzRodzajuPracy(nazwa = null) {
+    const dane = nazwa ? slowniki.rodzaje_prac[nazwa] : {};
+    const tytul = nazwa ? `Edytuj: ${nazwa}` : 'Nowy Rodzaj Pracy';
+    
+    const html = `
+        <div class="mb-3">
+            <label class="form-label">Nazwa rodzaju pracy</label>
+            <input type="text" class="form-control" id="rodzajNazwa" value="${nazwa || ''}" 
+                   ${nazwa ? 'disabled' : ''}>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Szerokość (mm)</label>
+                <input type="number" class="form-control" id="rodzajSzerokosc" 
+                       value="${dane.szerokosc || ''}" min="1">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Wysokość (mm)</label>
+                <input type="number" class="form-control" id="rodzajWysokosc" 
+                       value="${dane.wysokosc || ''}" min="1">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Opis (opcjonalnie)</label>
+            <input type="text" class="form-control" id="rodzajOpis" 
+                   value="${dane.opis || ''}">
+        </div>
+        <button class="btn btn-primary" onclick="zapiszRodzajPracy('${nazwa || ''}')">
+            <i class="fas fa-save"></i> Zapisz
+        </button>
+        <button class="btn btn-secondary" onclick="renderujRodzajePrac()">
+            Anuluj
+        </button>
+    `;
+    
+    $('#listaRodzajowPrac').html(html);
+}
+
+function zapiszRodzajPracy(staraNazwa) {
+    const nazwa = staraNazwa || $('#rodzajNazwa').val().trim();
+    const szerokosc = parseInt($('#rodzajSzerokosc').val());
+    const wysokosc = parseInt($('#rodzajWysokosc').val());
+    const opis = $('#rodzajOpis').val().trim();
+    
+    if (!nazwa) {
+        alert('Podaj nazwę rodzaju pracy');
+        return;
+    }
+    
+    if (!szerokosc || szerokosc <= 0 || !wysokosc || wysokosc <= 0) {
+        alert('Podaj poprawne wymiary (liczby dodatnie)');
+        return;
+    }
+    
+    const operacja = staraNazwa ? 'edytuj' : 'dodaj';
+    const payload = {
+        nazwa: nazwa,
+        szerokosc: szerokosc,
+        wysokosc: wysokosc,
+        opis: opis
+    };
+    
+    if (staraNazwa) {
+        payload.stara_nazwa = staraNazwa;
+    }
+    
+    $.ajax({
+        url: `/api/slowniki/rodzaje_prac/${operacja}`,
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        success: function(response) {
+            if (response.success) {
+                zaladujSlowniki();
+                pokazPowiadomienie(`Rodzaj pracy "${nazwa}" ${operacja === 'dodaj' ? 'dodany' : 'zaktualizowany'}`, 'success');
+            }
+        },
+        error: function(xhr) {
+            alert('Błąd: ' + (xhr.responseJSON?.error || 'Nieznany błąd'));
+        }
+    });
+}
+
+function edytujRodzajPracy(nazwa) {
+    pokazFormularzRodzajuPracy(nazwa);
+}
+
+function usunRodzajPracy(nazwa) {
+    if (!confirm(`Czy na pewno usunąć rodzaj pracy "${nazwa}"?`)) return;
+    
+    $.ajax({
+        url: '/api/slowniki/rodzaje_prac/usun',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ nazwa: nazwa }),
+        success: function(response) {
+            if (response.success) {
+                zaladujSlowniki();
+                pokazPowiadomienie(`Rodzaj pracy "${nazwa}" usunięty`, 'success');
+            }
+        },
+        error: function(xhr) {
+            alert('Błąd: ' + (xhr.responseJSON?.error || 'Nieznany błąd'));
+        }
+    });
+}
+
+// ==================== STAWKI ====================
+
+function renderujStawki() {
+    let stawki = slowniki.stawki;
+    
+    // JSON używa kluczy BEZ _pln, mapowanie na wartości
+    let roboczogodzina = stawki.roboczogodzina_przygotowania || 85;
+    let druku = stawki.roboczogodzina_druku || roboczogodzina;  // Fallback do przygotowania
+    let forma = stawki.koszt_formy_drukowej || 45;
+    let arkusze = stawki.stawka_nakladu_1000_arkuszy || 55;
+    
+    let html = `
+        <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle"></i> <strong>Wypełnij wszystkie pola stawek drukarni.</strong> 
+            Wartości są wymagane do kalkulacji cen.
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Roboczogodzina przygotowania (PLN/h):</strong></label>
+                <input type="number" class="form-control" id="stawka_roboczogodzina" step="0.01" 
+                       value="${roboczogodzina}" required min="0.01">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Roboczogodzina druku (PLN/h):</strong></label>
+                <input type="number" class="form-control" id="stawka_druku" step="0.01" 
+                       value="${druku}" required min="0.01">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Forma offsetowa (PLN):</strong></label>
+                <input type="number" class="form-control" id="stawka_forma" step="0.01" 
+                       value="${forma}" required min="0.01">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Koszt 1000 arkuszy (PLN):</strong></label>
+                <input type="number" class="form-control" id="stawka_arkusze" step="0.01" 
+                       value="${arkusze}" required min="0.01">
+            </div>
+        </div>
+        <button class="btn btn-success" onclick="zapiszStawki()">
+            <i class="fas fa-save"></i> Zapisz Stawki
+        </button>
+    `;
+    
+    $('#stawkiDrukarni').html(html);
+}
+
+function zapiszStawki() {
+    // Walidacja przed wysłaniem
+    let stawki = [
+        { klucz: 'roboczogodzina_przygotowania_pln', id: 'stawka_roboczogodzina', nazwa: 'Roboczogodzina przygotowania' },
+        { klucz: 'roboczogodzina_druku_pln', id: 'stawka_druku', nazwa: 'Roboczogodzina druku' },
+        { klucz: 'forma_offsetowa_pln', id: 'stawka_forma', nazwa: 'Forma offsetowa' },
+        { klucz: 'koszt_1000_arkuszy_pln', id: 'stawka_arkusze', nazwa: 'Koszt 1000 arkuszy' }
+    ];
+    
+    // Walidacja wszystkich pól
+    let errors = [];
+    for (let s of stawki) {
+        let val = $('#' + s.id).val();
+        let num = parseFloat(val);
+        
+        if (!val || val.trim() === '') {
+            errors.push(`${s.nazwa}: pole nie może być puste`);
+        } else if (isNaN(num)) {
+            errors.push(`${s.nazwa}: wartość musi być liczbą`);
+        } else if (num <= 0) {
+            errors.push(`${s.nazwa}: wartość musi być większa niż 0`);
+        }
+    }
+    
+    if (errors.length > 0) {
+        pokazBlad('Błędy walidacji:\n' + errors.join('\n'));
+        return;
+    }
+    
+    // Zapisz każdą stawkę osobno
+    let promises = stawki.map(s => {
+        let wartosc = parseFloat($('#' + s.id).val());
+        return $.ajax({
+            url: `/api/slowniki/stawki/edytuj`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                klucz: s.klucz,
+                wartosc: wartosc
+            })
+        });
+    });
+    
+    $.when.apply($, promises).done(function() {
+        zaladujSlowniki();
+        pokazSukces('Stawki zaktualizowane');
+    }).fail(function(xhr) {
+        pokazBlad('Błąd zapisywania stawek: ' + xhr.responseText);
+    });
+}
+
+// ==================== HELPER FUNCTIONS ====================
+
+function wykonajOperacje(kategoria, operacja, dane, onSuccess) {
+    $.ajax({
+        url: `/api/slowniki/${kategoria}/${operacja}`,
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(dane),
+        success: function(response) {
+            if (onSuccess) onSuccess(response);
+        },
+        error: function(xhr) {
+            let errorMsg = 'Błąd operacji';
+            try {
+                let resp = JSON.parse(xhr.responseText);
+                errorMsg = resp.error || errorMsg;
+            } catch(e) {
+                errorMsg = xhr.responseText || errorMsg;
+            }
+            pokazBlad(errorMsg);
+        }
+    });
+}
+
+function pokazSukces(msg) {
+    alert('✅ ' + msg);
+}
+
+function pokazBlad(msg) {
+    alert('❌ ' + msg);
+}
+
+function eksportujSlowniki() {
+    // Pobierz słowniki przez GET i zapisz do pliku
+    $.ajax({
+        url: '/api/slowniki',
+        method: 'GET',
+        success: function(slowniki) {
+            // Utwórz timestamp
+            const timestamp = new Date().toISOString().slice(0,10).replace(/-/g, '');
+            const filename = `slowniki_druku_${timestamp}.json`;
+            
+            // Utwórz blob i pobierz plik
+            const dataStr = JSON.stringify(slowniki, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Eksport zakończony!',
+                text: `Plik ${filename} został pobrany`,
+                timer: 2000
+            });
+        },
+        error: function(xhr) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Błąd eksportu',
+                text: xhr.responseJSON?.error || 'Nie udało się wyeksportować słowników'
+            });
+        }
+    });
+}
+
+// ==================== CIĘCIE PAPIERU ====================
+
+function renderujCiecie() {
+    if (!slowniki.ciecie_papieru) {
+        slowniki.ciecie_papieru = {
+            koszt_roboczogodziny_pln: 60.0,
+            wydajnosc_arkuszy_h: 500,
+            wymiary_zakupu_mm: {szerokosc: 700, wysokosc: 1000},
+            koszt_przygotowania_pln: 20.0
+        };
+    }
+    
+    const c = slowniki.ciecie_papieru;
+    $('#ciecieRoboczogodzina').val(c.koszt_roboczogodziny_pln);
+    $('#ciecieWydajnosc').val(c.wydajnosc_arkuszy_h);
+    $('#cieciePrzygotowanie').val(c.koszt_przygotowania_pln);
+    $('#ciecieSzerokosc').val(c.wymiary_zakupu_mm.szerokosc);
+    $('#ciecieWysokosc').val(c.wymiary_zakupu_mm.wysokosc);
+}
+
+function zapiszCiecie() {
+    const dane = {
+        koszt_roboczogodziny_pln: parseFloat($('#ciecieRoboczogodzina').val()),
+        wydajnosc_arkuszy_h: parseInt($('#ciecieWydajnosc').val()),
+        wymiary_zakupu_mm: {
+            szerokosc: 700,
+            wysokosc: 1000
+        },
+        koszt_przygotowania_pln: parseFloat($('#cieciePrzygotowanie').val())
+    };
+    
+    // Walidacja
+    if (dane.koszt_roboczogodziny_pln <= 0 || dane.wydajnosc_arkuszy_h <= 0 || dane.koszt_przygotowania_pln < 0) {
+        pokazBlad('Wartości muszą być większe od zera (koszt przygotowania może być 0)');
+        return;
+    }
+    
+    $.ajax({
+        url: '/api/slowniki/ciecie/edytuj',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(dane),
+        success: function(response) {
+            slowniki.ciecie_papieru = dane;
+            pokazSukces('Parametry cięcia zapisane pomyślnie!');
+        },
+        error: function(xhr) {
+            pokazBlad('Błąd zapisu: ' + (xhr.responseJSON?.error || 'Nieznany błąd'));
+        }
+    });
+}
+
+function utworzBackup() {
+    $.ajax({
+        url: '/api/backup',
+        method: 'POST',
+        success: function(response) {
+            pokazSukces(`Backup utworzony: ${response.file}`);
+        },
+        error: function(xhr) {
+            pokazBlad('Błąd tworzenia backupu');
+        }
+    });
+}
+</script>
+{% endblock %}

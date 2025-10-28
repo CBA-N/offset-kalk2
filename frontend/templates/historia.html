@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+
+{% block title %}Historia Ofert - Kalkulator Druku{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="text-center mb-4">
+        <h1><i class="fas fa-history text-primary"></i> Historia Ofert</h1>
+        <p class="lead text-muted">Przeglądaj i zarządzaj wygenerowanymi ofertami</p>
+    </div>
+
+    <!-- Statystyki -->
+    <div class="row mb-4" id="statystyki">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3 id="stat-total">0</h3>
+                <p>Ofert łącznie</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3 id="stat-suma">0 PLN</h3>
+                <p>Suma wartości</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3 id="stat-srednia">0 PLN</h3>
+                <p>Średnia wartość</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h3 id="stat-papier">-</h3>
+                <p>Najpopularniejszy papier</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtrowanie -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Szukaj po nazwie produktu...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterPapier">
+                        <option value="">Wszystkie papiery</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="sortBy">
+                        <option value="data-desc">Najnowsze</option>
+                        <option value="data-asc">Najstarsze</option>
+                        <option value="cena-desc">Najdroższe</option>
+                        <option value="cena-asc">Najtańsze</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-danger w-100" onclick="wyczyscHistorie()">
+                        <i class="fas fa-trash"></i> Wyczyść
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista ofert -->
+    <div id="listaOfert"></div>
+
+    <!-- Pusty stan -->
+    <div id="pustystan" class="text-center p-5" style="display: none;">
+        <i class="fas fa-inbox fa-5x text-muted mb-3"></i>
+        <h4 class="text-muted">Brak ofert w historii</h4>
+        <p class="text-muted">Wygeneruj pierwszą ofertę używając kalkulatora</p>
+        <a href="/" class="btn btn-primary mt-3">
+            <i class="fas fa-calculator"></i> Przejdź do Kalkulatora
+        </a>
+    </div>
+</div>
+
+<!-- Modal szczegółów oferty -->
+<div class="modal fade" id="ofertaModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Szczegóły Oferty</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="ofertaDetails"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+                <button type="button" class="btn btn-primary" onclick="drukujOferte()">
+                    <i class="fas fa-print"></i> Drukuj
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let oferty = [];
+let aktualnaOferta = null;
+
+$(document).ready(function() {
+    zaladujHistorie();
+    zaladujStatystyki();
+    
+    // Event handlers
+    $('#searchInput').on('input', filtrowanieLista);
+    $('#filterPapier').on('change', filtrowanieLista);
+    $('#sortBy').on('change', sortujListe);
+});
+
+function zaladujHistorie() {
+    $.get('/api/historia', function(data) {
+        oferty = data;
+        
+        if (oferty.length === 0) {
+            $('#pustystan').show();
+            $('#listaOfert').hide();
+        } else {
+            $('#pustystan').hide();
+            $('#listaOfert').show();
+            
+            // Wypełnij filtr papierów
+            const papiery = [...new Set(oferty.map(o => o.rodzaj_papieru))];
+            let options = '<option value="">Wszystkie papiery</option>';
+            papiery.forEach(p => {
+                options += `<option value="${p}">${p}</option>`;
+            });
+            $('#filterPapier').html(options);
+            
+            renderujListe();
+        }
+    });
+}
+
+function zaladujStatystyki() {
+    $.get('/api/statystyki', function(stats) {
+        $('#stat-total').text(stats.total_ofert);
+        $('#stat-suma').text(stats.suma_wartosci.toFixed(2) + ' PLN');
+        $('#stat-srednia').text(stats.srednia_wartosc.toFixed(2) + ' PLN');
+        $('#stat-papier').text(stats.najczesciej_papier || '-');
+    });
+}
+
+function renderujListe() {
+    let html = '';
+    
+    oferty.forEach((oferta, idx) => {
+        const data = new Date(oferta.timestamp).toLocaleString('pl-PL');
+        
+        html += `
+            <div class="card mb-3 oferta-card" data-id="${oferta.id}">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h5 class="card-title mb-1">
+                                <i class="fas fa-file-invoice"></i> Oferta #${oferta.id}
+                            </h5>
+                            <p class="text-muted mb-1">
+                                <small>
+                                    ${oferta.format_druku || 'Brak danych'} | 
+                                    ${oferta.naklad} szt | 
+                                    ${oferta.rodzaj_papieru || 'Brak danych'}
+                                </small>
+                            </p>
+                            ${oferta.kontrahent && oferta.kontrahent.nazwa ? `
+                            <p class="mb-1">
+                                <span class="badge bg-info">
+                                    <i class="fas fa-building"></i> ${oferta.kontrahent.nazwa}
+                                </span>
+                            </p>
+                            ` : ''}
+                            <p class="text-muted mb-0">
+                                <small><i class="fas fa-clock"></i> ${data}</small>
+                            </p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-primary mb-0">${oferta.cena_brutto_vat23.toFixed(2)} PLN</h4>
+                            <small class="text-muted">brutto (VAT 23%)</small>
+                            <br>
+                            <span class="badge bg-info mt-1">${oferta.format_druku || 'Standard'}</span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-sm btn-outline-primary" onclick="pokazSzczegoly(${oferta.id})">
+                                <i class="fas fa-eye"></i> Szczegóły
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="duplikujOferte(${oferta.id})" title="Duplikuj ofertę">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="usunOferte(${oferta.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    $('#listaOfert').html(html);
+}
+
+function filtrowanieLista() {
+    const search = $('#searchInput').val().toLowerCase();
+    const papier = $('#filterPapier').val();
+    
+    $('.oferta-card').each(function() {
+        const id = $(this).data('id');
+        const oferta = oferty.find(o => o.id === id);
+        
+        let pokazuj = true;
+        
+        if (search) {
+            const searchText = `${oferta.id} ${oferta.rodzaj_papieru || ''} ${oferta.format_druku || ''}`.toLowerCase();
+            if (!searchText.includes(search)) {
+                pokazuj = false;
+            }
+        }
+        
+        if (papier && oferta.rodzaj_papieru !== papier) {
+            pokazuj = false;
+        }
+        
+        if (pokazuj) {
+            $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+}
+
+function sortujListe() {
+    const sortBy = $('#sortBy').val();
+    
+    switch(sortBy) {
+        case 'data-desc':
+            oferty.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            break;
+        case 'data-asc':
+            oferty.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            break;
+        case 'cena-desc':
+            oferty.sort((a, b) => b.cena_brutto_vat23 - a.cena_brutto_vat23);
+            break;
+        case 'cena-asc':
+            oferty.sort((a, b) => a.cena_brutto_vat23 - b.cena_brutto_vat23);
+            break;
+    }
+    
+    renderujListe();
+    filtrowanieLista();
+}
+
+function pokazSzczegoly(id) {
+    aktualnaOferta = oferty.find(o => o.id === id);
+    
+    if (!aktualnaOferta) return;
+    
+    // Detekcja wersji oferty - v1.1 ma wybrany_format, v1.0 nie ma
+    const maWybranyFormat = aktualnaOferta.wybrany_format !== undefined;
+    
+    if (maWybranyFormat) {
+        pokazPelneSzczegoly(aktualnaOferta);
+    } else {
+        pokazUproszczoneSzczegoly(aktualnaOferta);
+    }
+}
+
+function pokazUproszczoneSzczegoly(oferta) {
+    // Dla starych ofert (v1.0) bez pełnych danych
+    let html = `
+        <h4>Oferta #${oferta.id} <span class="badge bg-secondary">v1.0</span></h4>
+        <p class="text-muted"><small>Data utworzenia: ${new Date(oferta.timestamp).toLocaleString('pl-PL')}</small></p>
+        
+        <hr>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>Format druku:</strong> ${oferta.format_druku || 'Brak danych'}</p>
+                <p><strong>Nakład:</strong> ${oferta.naklad || 'Brak danych'} szt</p>
+                <p><strong>Papier:</strong> ${oferta.rodzaj_papieru || 'Brak danych'}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Cena netto:</strong> ${oferta.cena_netto ? oferta.cena_netto.toFixed(2) + ' PLN' : 'Brak danych'}</p>
+                <p><strong>Cena z marżą:</strong> ${oferta.cena_z_marza_netto ? oferta.cena_z_marza_netto.toFixed(2) + ' PLN' : 'Brak danych'}</p>
+                <p><strong>Cena brutto (VAT 23%):</strong> <span class="text-success fw-bold">${oferta.cena_brutto_vat23 ? oferta.cena_brutto_vat23.toFixed(2) + ' PLN' : 'Brak danych'}</span></p>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle"></i> <strong>Uwaga:</strong> To jest oferta ze starej wersji systemu (v1.0) - brak pełnych szczegółów kalkulacji.
+        </div>
+    `;
+    
+    $('#ofertaDetails').html(html);
+    $('#ofertaModal').modal('show');
+}
+
+function pokazPelneSzczegoly(oferta) {
+    // Dla nowych ofert (v1.1+) z pełnymi danymi kalkulacji
+    const format = oferta.wybrany_format;
+    const formatMM = oferta.format_wydruku_mm || [];
+    const maKontrahenta = oferta.kontrahent && oferta.kontrahent.nazwa;
+    
+    let html = `
+        <h4>${oferta.nazwa_produktu || 'Oferta'} #${oferta.id} <span class="badge bg-success">v1.2</span></h4>
+        <p class="text-muted"><small>Data utworzenia: ${new Date(oferta.timestamp).toLocaleString('pl-PL')}</small></p>
+        
+        ${maKontrahenta ? `
+        <div class="alert alert-info mb-3">
+            <h6><i class="fas fa-building"></i> Kontrahent:</h6>
+            <p class="mb-1"><strong>Nazwa:</strong> ${oferta.kontrahent.nazwa}</p>
+            ${oferta.kontrahent.nip ? `<p class="mb-1"><strong>NIP:</strong> ${oferta.kontrahent.nip}</p>` : ''}
+            ${oferta.kontrahent.adres && oferta.kontrahent.adres.miasto ? `
+            <p class="mb-1"><strong>Adres:</strong> 
+                ${oferta.kontrahent.adres.ulica || ''}, 
+                ${oferta.kontrahent.adres.kod_pocztowy || ''} ${oferta.kontrahent.adres.miasto || ''}
+            </p>` : ''}
+            ${oferta.kontrahent.email ? `<p class="mb-1"><strong>Email:</strong> ${oferta.kontrahent.email}</p>` : ''}
+            ${oferta.kontrahent.telefon ? `<p class="mb-0"><strong>Telefon:</strong> ${oferta.kontrahent.telefon}</p>` : ''}
+        </div>
+        ` : ''}
+        
+        <hr>
+        
+        <!-- Dane podstawowe -->
+        <h5><i class="fas fa-file-alt"></i> Dane podstawowe</h5>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>Format wydruku:</strong> ${formatMM[0]} × ${formatMM[1]} mm</p>
+                <p><strong>Nakład:</strong> ${oferta.naklad.toLocaleString('pl-PL')} szt</p>
+                <p><strong>Papier:</strong> ${oferta.rodzaj_papieru} ${oferta.gramatura}g</p>
+                <p><strong>Kolorystyka:</strong> ${oferta.kolorysyka_cmyk}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Marża:</strong> ${oferta.marza_procent}%</p>
+                <p><strong>Priorytet:</strong> ${oferta.priorytet_optymalizacji}</p>
+                <p><strong>Czas realizacji:</strong> ${oferta.czas_realizacji_h ? oferta.czas_realizacji_h.toFixed(2) + ' h' : 'N/A'}</p>
+                <p><strong>Waga:</strong> ${oferta.waga_kg ? oferta.waga_kg.toFixed(2) + ' kg' : 'N/A'}</p>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <!-- Wybrany format arkusza -->
+        <h5><i class="fas fa-th-large"></i> Wybrany format arkusza</h5>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>Format:</strong> ${format.format_name} (${format.szerokosc} × ${format.wysokosc} mm)</p>
+                <p><strong>Powierzchnia:</strong> ${format.powierzchnia.toFixed(4)} m²</p>
+                <p><strong>Użytków na arkuszu:</strong> ${format.uzytki_na_ark} szt</p>
+                <p><strong>Orientacja:</strong> ${format.orientacja}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Ilość arkuszy:</strong> ${format.ilosc_arkuszy} szt</p>
+                <p><strong>Odpady:</strong> ${format.odpady_procent.toFixed(2)}%</p>
+                <p><strong>Wykorzystanie:</strong> ${format.wykorzystanie_procent.toFixed(2)}%</p>
+                <p><strong>Ocena formatu:</strong> <span class="badge bg-primary">${(format.score * 100).toFixed(1)}/100</span></p>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <!-- Szczegółowa kalkulacja kosztów -->
+        <h5><i class="fas fa-calculator"></i> Szczegółowa kalkulacja kosztów</h5>
+        <table class="table table-sm table-striped">
+            <tbody>
+                <tr>
+                    <td>Koszt papieru</td>
+                    <td class="text-end">${oferta.koszt_papieru.toFixed(2)} PLN</td>
+                </tr>
+                <tr>
+                    <td>Koszt druku</td>
+                    <td class="text-end">${oferta.koszt_druku.toFixed(2)} PLN</td>
+                </tr>
+                <tr>
+                    <td>Kolory specjalne</td>
+                    <td class="text-end">${oferta.koszt_kolorow_spec.toFixed(2)} PLN</td>
+                </tr>
+                <tr>
+                    <td>Uszlachetnienia</td>
+                    <td class="text-end">${oferta.koszt_uszlachetnien.toFixed(2)} PLN</td>
+                </tr>
+                <tr>
+                    <td>Obróbka wykończeniowa</td>
+                    <td class="text-end">${oferta.koszt_obrobki.toFixed(2)} PLN</td>
+                </tr>
+                <tr>
+                    <td>Pakowanie</td>
+                    <td class="text-end">${oferta.koszt_pakowania.toFixed(2)} PLN</td>
+                </tr>
+                <tr>
+                    <td>Transport</td>
+                    <td class="text-end">${oferta.koszt_transportu.toFixed(2)} PLN</td>
+                </tr>
+                <tr class="table-active fw-bold">
+                    <td>Suma kosztów netto</td>
+                    <td class="text-end">${oferta.suma_kosztow_netto.toFixed(2)} PLN</td>
+                </tr>
+                <tr class="table-success">
+                    <td>Cena z marżą (netto)</td>
+                    <td class="text-end">${oferta.cena_z_marza_netto.toFixed(2)} PLN</td>
+                </tr>
+                <tr class="table-success fw-bold">
+                    <td>Cena brutto (VAT 23%)</td>
+                    <td class="text-end fs-5">${oferta.cena_brutto_vat23.toFixed(2)} PLN</td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+    
+    // Alternatywne formaty (jeśli istnieją)
+    if (oferta.alternatywne_formaty && oferta.alternatywne_formaty.length > 0) {
+        html += `
+            <hr>
+            <h5><i class="fas fa-list-alt"></i> Alternatywne formaty (${oferta.alternatywne_formaty.length})</h5>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Format</th>
+                            <th>Wymiary</th>
+                            <th>Użytków</th>
+                            <th>Odpady</th>
+                            <th>Koszt</th>
+                            <th>Ocena</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        oferta.alternatywne_formaty.forEach(alt => {
+            html += `
+                        <tr>
+                            <td>${alt.format_name}</td>
+                            <td>${alt.szerokosc}×${alt.wysokosc} mm</td>
+                            <td>${alt.uzytki_na_ark}</td>
+                            <td>${alt.odpady_procent.toFixed(1)}%</td>
+                            <td>${alt.koszt_papieru.toFixed(2)} PLN</td>
+                            <td><span class="badge bg-secondary">${(alt.score * 100).toFixed(1)}/100</span></td>
+                        </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+    
+    $('#ofertaDetails').html(html);
+    $('#ofertaModal').modal('show');
+}
+
+function drukujOferte() {
+    if (!aktualnaOferta) return;
+    
+    // Otwórz okno druku
+    const content = $('#ofertaDetails').html();
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Oferta #${aktualnaOferta.id}</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head>
+        <body>
+            <div class="container mt-4">${content}</div>
+            <script>window.print();<\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+
+function duplikujOferte(id) {
+    const oferta = oferty.find(o => o.id === id);
+    if (!oferta) {
+        alert('❌ Nie znaleziono oferty');
+        return;
+    }
+    
+    // Sprawdź czy ma pełne dane (v1.1)
+    if (!oferta.wybrany_format) {
+        alert('⚠️ Ta oferta pochodzi z starej wersji systemu (v1.0) i nie zawiera pełnych danych potrzebnych do duplikacji.\n\nMożesz jednak ręcznie stworzyć nową ofertę z podobnymi parametrami w kalkulatorze.');
+        return;
+    }
+    
+    // Buduj URL z parametrami
+    const params = new URLSearchParams({
+        nazwa_produktu: oferta.nazwa_produktu || 'Kopia oferty #' + id,
+        format_szerokosc: oferta.format_wydruku_mm[0],
+        format_wysokosc: oferta.format_wydruku_mm[1],
+        naklad: oferta.naklad,
+        rodzaj_papieru: oferta.rodzaj_papieru,
+        gramatura: oferta.gramatura,
+        kolorystyka: oferta.kolorysyka_cmyk,
+        kolory_specjalne: JSON.stringify(oferta.kolory_specjalne || []),
+        uszlachetnienia: JSON.stringify(oferta.uszlachetnienia || []),
+        obrobka: JSON.stringify(oferta.obrobka || []),
+        pakowanie: oferta.pakowanie || '',
+        transport: oferta.transport || '',
+        marza_procent: oferta.marza_procent,
+        priorytet_optymalizacji: oferta.priorytet_optymalizacji,
+        kontrahent_id: oferta.kontrahent_id || '',
+        duplikat_z: id
+    });
+    
+    // Przekieruj do kalkulatora z parametrami
+    window.location.href = '/?' + params.toString();
+}
+
+function usunOferte(id) {
+    if (!confirm('Czy na pewno usunąć tę ofertę?')) return;
+    
+    $.ajax({
+        url: '/api/historia/' + id,
+        method: 'DELETE',
+        success: function() {
+            zaladujHistorie();
+            zaladujStatystyki();
+        }
+    });
+}
+
+function wyczyscHistorie() {
+    if (!confirm('Czy na pewno wyczyścić całą historię ofert?')) return;
+    
+    const promises = oferty.map(o => 
+        $.ajax({ url: '/api/historia/' + o.id, method: 'DELETE' })
+    );
+    
+    Promise.all(promises).then(() => {
+        zaladujHistorie();
+        zaladujStatystyki();
+    });
+}
+</script>
+{% endblock %}

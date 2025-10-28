@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+
+{% block title %}Edytor Słowników - Kalkulator Druku{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="text-center mb-4">
+        <h1><i class="fas fa-book text-primary"></i> Edytor Słowników</h1>
+        <p class="lead text-muted">Zarządzaj cennikami i parametrami systemu</p>
+    </div>
+
+    <!-- Zakładki -->
+    <ul class="nav nav-tabs mb-4" id="slownikTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="papiery-tab" data-bs-toggle="tab" data-bs-target="#papiery" type="button">
+                <i class="fas fa-file-alt"></i> Papiery
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="uszlachetnienia-tab" data-bs-toggle="tab" data-bs-target="#uszlachetnienia" type="button">
+                <i class="fas fa-star"></i> Uszlachetnienia
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="obrobka-tab" data-bs-toggle="tab" data-bs-target="#obrobka" type="button">
+                <i class="fas fa-cut"></i> Obróbka
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="kolory-tab" data-bs-toggle="tab" data-bs-target="#kolory" type="button">
+                <i class="fas fa-palette"></i> Kolory Specjalne
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pakowanie-tab" data-bs-toggle="tab" data-bs-target="#pakowanie" type="button">
+                <i class="fas fa-box"></i> Pakowanie
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="transport-tab" data-bs-toggle="tab" data-bs-target="#transport" type="button">
+                <i class="fas fa-truck"></i> Transport
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="stawki-tab" data-bs-toggle="tab" data-bs-target="#stawki" type="button">
+                <i class="fas fa-coins"></i> Stawki Drukarni
+            </button>
+        </li>
+    </ul>
+
+    <!-- Zawartość zakładek -->
+    <div class="tab-content" id="slownikTabContent">
+        <!-- Papiery -->
+        <div class="tab-pane fade show active" id="papiery" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Rodzaje Papierów</span>
+                    <button class="btn btn-success btn-sm" onclick="dodajPapier()">
+                        <i class="fas fa-plus"></i> Dodaj Papier
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaPapierow"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Uszlachetnienia -->
+        <div class="tab-pane fade" id="uszlachetnienia" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Rodzaje Uszlachetnień</span>
+                    <button class="btn btn-success btn-sm" onclick="dodajUszlachetnienie()">
+                        <i class="fas fa-plus"></i> Dodaj Uszlachetnienie
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaUszlachetnien"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Obróbka -->
+        <div class="tab-pane fade" id="obrobka" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Operacje Obróbki</span>
+                    <button class="btn btn-success btn-sm" onclick="dodajObrobke()">
+                        <i class="fas fa-plus"></i> Dodaj Operację
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaObrobki"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolory specjalne -->
+        <div class="tab-pane fade" id="kolory" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Kolory Specjalne</span>
+                    <button class="btn btn-success btn-sm" onclick="dodajKolor()">
+                        <i class="fas fa-plus"></i> Dodaj Kolor
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaKolorow"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pakowanie -->
+        <div class="tab-pane fade" id="pakowanie" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Opcje Pakowania</span>
+                    <button class="btn btn-success btn-sm" onclick="dodajPakowanie()">
+                        <i class="fas fa-plus"></i> Dodaj Pakowanie
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaPakowania"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transport -->
+        <div class="tab-pane fade" id="transport" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Opcje Transportu</span>
+                    <button class="btn btn-success btn-sm" onclick="dodajTransport()">
+                        <i class="fas fa-plus"></i> Dodaj Transport
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaTransportu"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stawki drukarni -->
+        <div class="tab-pane fade" id="stawki" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <span>Stawki Drukarni</span>
+                </div>
+                <div class="card-body">
+                    <div id="stawkiDrukarni"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Przycisk eksportu -->
+    <div class="text-center mt-4">
+        <button class="btn btn-primary" onclick="eksportujSlowniki()">
+            <i class="fas fa-download"></i> Eksportuj Słowniki do JSON
+        </button>
+        <button class="btn btn-warning" onclick="zapisSlowniki()">
+            <i class="fas fa-save"></i> Zapisz Zmiany
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let slowniki = {};
+
+$(document).ready(function() {
+    zaladujSlowniki();
+});
+
+function zaladujSlowniki() {
+    $.get('/api/slowniki', function(data) {
+        slowniki = data;
+        renderujPapiery();
+        renderujUszlachetnienia();
+        renderujObrobke();
+        renderujKolory();
+        renderujPakowanie();
+        renderujTransport();
+        renderujStawki();
+    });
+}
+
+function renderujPapiery() {
+    let html = '<div class="accordion" id="accordionPapiery">';
+    let idx = 0;
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.papiery)) {
+        html += `
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button ${idx > 0 ? 'collapsed' : ''}" type="button" 
+                            data-bs-toggle="collapse" data-bs-target="#papier${idx}">
+                        <strong>${nazwa}</strong> 
+                        <span class="badge bg-secondary ms-2">${dane.gramatury.length} gramatur</span>
+                        <span class="badge bg-info ms-2">${dane.kategoria}</span>
+                    </button>
+                </h2>
+                <div id="papier${idx}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" 
+                     data-bs-parent="#accordionPapiery">
+                    <div class="accordion-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Gramatury (g/m²):</strong></label>
+                                <p class="text-muted">${dane.gramatury.join(', ')}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Kategoria:</strong></label>
+                                <p class="text-muted">${dane.kategoria}</p>
+                            </div>
+                        </div>
+                        
+                        <label class="form-label"><strong>Ceny (PLN/kg):</strong></label>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead><tr><th>Gramatura</th><th>Cena PLN/kg</th></tr></thead>
+                                <tbody>
+        `;
+        
+        dane.gramatury.forEach(gram => {
+            html += `<tr><td>${gram} g/m²</td><td>${dane.ceny[gram]} PLN</td></tr>`;
+        });
+        
+        html += `
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-sm btn-warning" onclick="edytujPapier('${nazwa}')">
+                            <i class="fas fa-edit"></i> Edytuj
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="usunPapier('${nazwa}')">
+                            <i class="fas fa-trash"></i> Usuń
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        idx++;
+    }
+    
+    html += '</div>';
+    $('#listaPapierow').html(html);
+}
+
+function renderujUszlachetnienia() {
+    let html = '<div class="row">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.uszlachetnienia)) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">${nazwa}</h5>
+                        <p class="mb-1"><small><strong>Cena:</strong> ${dane.cena_za_m2} PLN/m²</small></p>
+                        <p class="mb-1"><small><strong>Czas:</strong> ${dane.czas_przygotowania_min} min</small></p>
+                        <p class="mb-1"><small><strong>Typ:</strong> ${dane.typ}</small></p>
+                        ${dane.koszt_matrycy ? `<p class="mb-1"><small><strong>Matryca:</strong> ${dane.koszt_matrycy} PLN</small></p>` : ''}
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning" onclick="edytujUszlachetnienie('${nazwa}')">
+                                <i class="fas fa-edit"></i> Edytuj
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="usunUszlachetnienie('${nazwa}')">
+                                <i class="fas fa-trash"></i> Usuń
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaUszlachetnien').html(html);
+}
+
+function renderujObrobke() {
+    let html = '<div class="row">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.obrobka)) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">${nazwa}</h5>
+                        ${dane.stawka_godzinowa ? `<p class="mb-1"><small><strong>Stawka:</strong> ${dane.stawka_godzinowa} PLN/h</small></p>` : ''}
+                        ${dane.wydajnosc_arkuszy_h ? `<p class="mb-1"><small><strong>Wydajność:</strong> ${dane.wydajnosc_arkuszy_h} ark/h</small></p>` : ''}
+                        ${dane.wydajnosc_sztuk_h ? `<p class="mb-1"><small><strong>Wydajność:</strong> ${dane.wydajnosc_sztuk_h} szt/h</small></p>` : ''}
+                        ${dane.koszt_za_sztuke ? `<p class="mb-1"><small><strong>Koszt:</strong> ${dane.koszt_za_sztuke} PLN/szt</small></p>` : ''}
+                        <p class="mb-1"><small><strong>Przygotowanie:</strong> ${dane.koszt_przygotowania} PLN</small></p>
+                        <p class="mb-1"><small><strong>Typ:</strong> ${dane.typ}</small></p>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning" onclick="edytujObrobke('${nazwa}')">
+                                <i class="fas fa-edit"></i> Edytuj
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="usunObrobke('${nazwa}')">
+                                <i class="fas fa-trash"></i> Usuń
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaObrobki').html(html);
+}
+
+function renderujKolory() {
+    let html = '<div class="row">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.kolory_specjalne)) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">${nazwa}</h5>
+                        <p class="mb-1"><small><strong>Koszt:</strong> ${dane.koszt_za_kolor} PLN/kolor</small></p>
+                        <p class="mb-1"><small><strong>Preparat:</strong> ${dane.koszt_preparatu} PLN</small></p>
+                        <p class="mb-1"><small><strong>Czas:</strong> ${dane.czas_przygotowania_min} min</small></p>
+                        <p class="mb-1"><small>${dane.opis}</small></p>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-warning" onclick="edytujKolor('${nazwa}')">
+                                <i class="fas fa-edit"></i> Edytuj
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="usunKolor('${nazwa}')">
+                                <i class="fas fa-trash"></i> Usuń
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaKolorow').html(html);
+}
+
+function renderujPakowanie() {
+    let html = '<div class="list-group">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.pakowanie)) {
+        html += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">${nazwa}</h6>
+                    <small class="text-muted">${dane.opis}</small>
+                    <br><small><strong>${dane.cena} PLN</strong></small>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-warning" onclick="edytujPakowanie('${nazwa}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="usunPakowanie('${nazwa}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaPakowania').html(html);
+}
+
+function renderujTransport() {
+    let html = '<div class="list-group">';
+    
+    for (let [nazwa, dane] of Object.entries(slowniki.transport)) {
+        html += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">${nazwa}</h6>
+                    <small><strong>${dane.cena} PLN</strong> | Czas: ${dane.czas_dni} dni${dane.max_waga_kg ? ` | Max: ${dane.max_waga_kg}kg` : ''}</small>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-warning" onclick="edytujTransport('${nazwa}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="usunTransport('${nazwa}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    $('#listaTransportu').html(html);
+}
+
+function renderujStawki() {
+    let html = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Roboczogodzina przygotowania (PLN/h):</strong></label>
+                <input type="number" class="form-control" value="${slowniki.stawki.roboczogodzina_przygotowania}" 
+                       id="stawka_roboczogodzina" step="0.01">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Stawka nakładu (PLN za 1000 arkuszy):</strong></label>
+                <input type="number" class="form-control" value="${slowniki.stawki.stawka_nakladu_1000_arkuszy}" 
+                       id="stawka_naklad" step="0.01">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Koszt formy drukowej (PLN):</strong></label>
+                <input type="number" class="form-control" value="${slowniki.stawki.koszt_formy_drukowej}" 
+                       id="stawka_forma" step="0.01">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Szybkość druku (arkuszy/h):</strong></label>
+                <input type="number" class="form-control" value="${slowniki.stawki.szybkosc_druku_arkuszy_h}" 
+                       id="stawka_szybkosc" step="1">
+            </div>
+        </div>
+        <button class="btn btn-success" onclick="zapiszStawki()">
+            <i class="fas fa-save"></i> Zapisz Stawki
+        </button>
+    `;
+    
+    $('#stawkiDrukarni').html(html);
+}
+
+// Funkcje placeholderów dla edycji (do rozbudowy)
+function dodajPapier() { alert('Funkcja dodawania papieru - w rozwoju'); }
+function edytujPapier(nazwa) { alert('Edycja papieru: ' + nazwa + ' - w rozwoju'); }
+function usunPapier(nazwa) { 
+    if (confirm('Czy na pewno usunąć papier: ' + nazwa + '?')) {
+        delete slowniki.papiery[nazwa];
+        renderujPapiery();
+    }
+}
+
+function dodajUszlachetnienie() { alert('Funkcja dodawania uszlachetnienia - w rozwoju'); }
+function edytujUszlachetnienie(nazwa) { alert('Edycja: ' + nazwa + ' - w rozwoju'); }
+function usunUszlachetnienie(nazwa) {
+    if (confirm('Czy na pewno usunąć: ' + nazwa + '?')) {
+        delete slowniki.uszlachetnienia[nazwa];
+        renderujUszlachetnienia();
+    }
+}
+
+function dodajObrobke() { alert('Funkcja dodawania obróbki - w rozwoju'); }
+function edytujObrobke(nazwa) { alert('Edycja: ' + nazwa + ' - w rozwoju'); }
+function usunObrobke(nazwa) {
+    if (confirm('Czy na pewno usunąć: ' + nazwa + '?')) {
+        delete slowniki.obrobka[nazwa];
+        renderujObrobke();
+    }
+}
+
+function dodajKolor() { alert('Funkcja dodawania koloru - w rozwoju'); }
+function edytujKolor(nazwa) { alert('Edycja: ' + nazwa + ' - w rozwoju'); }
+function usunKolor(nazwa) {
+    if (confirm('Czy na pewno usunąć: ' + nazwa + '?')) {
+        delete slowniki.kolory_specjalne[nazwa];
+        renderujKolory();
+    }
+}
+
+function dodajPakowanie() { alert('Funkcja dodawania pakowania - w rozwoju'); }
+function edytujPakowanie(nazwa) { alert('Edycja: ' + nazwa + ' - w rozwoju'); }
+function usunPakowanie(nazwa) {
+    if (confirm('Czy na pewno usunąć: ' + nazwa + '?')) {
+        delete slowniki.pakowanie[nazwa];
+        renderujPakowanie();
+    }
+}
+
+function dodajTransport() { alert('Funkcja dodawania transportu - w rozwoju'); }
+function edytujTransport(nazwa) { alert('Edycja: ' + nazwa + ' - w rozwoju'); }
+function usunTransport(nazwa) {
+    if (confirm('Czy na pewno usunąć: ' + nazwa + '?')) {
+        delete slowniki.transport[nazwa];
+        renderujTransport();
+    }
+}
+
+function zapiszStawki() {
+    slowniki.stawki.roboczogodzina_przygotowania = parseFloat($('#stawka_roboczogodzina').val());
+    slowniki.stawki.stawka_nakladu_1000_arkuszy = parseFloat($('#stawka_naklad').val());
+    slowniki.stawki.koszt_formy_drukowej = parseFloat($('#stawka_forma').val());
+    slowniki.stawki.szybkosc_druku_arkuszy_h = parseInt($('#stawka_szybkosc').val());
+    
+    alert('Stawki zapisane lokalnie. Użyj przycisku "Zapisz Zmiany" aby zapisać trwale.');
+}
+
+function zapisSlowniki() {
+    alert('Zapisywanie zmian do systemu - w produkcji zapisze do bazy danych lub pliku');
+    console.log('Słowniki do zapisu:', slowniki);
+}
+
+function eksportujSlowniki() {
+    window.open('/api/eksport/json', '_blank');
+}
+</script>
+{% endblock %}
