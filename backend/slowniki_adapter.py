@@ -3,6 +3,8 @@ Adapter słowników - konwertuje nową strukturę danych (z cena_pln)
 na starą strukturę wymaganą przez KalkulatorDruku
 """
 
+import re
+
 
 def adapter_nowy_do_starego(slowniki_nowe: dict) -> dict:
     """
@@ -31,25 +33,41 @@ def adapter_nowy_do_starego(slowniki_nowe: dict) -> dict:
         'priorytety': slowniki_nowe.get('priorytety', {}),
     }
     
-    # USZLACHETNIENIA: cena_pln → cena_za_m2, cena_za_arkusz_B2, cena_za_arkusz_A2
+    # USZLACHETNIENIA: zachowaj ceny jednostkowe oraz stare pola pomocnicze
     uszlachetnienia_stare = {}
     for nazwa, dane in slowniki_nowe.get('uszlachetnienia', {}).items():
         if 'cena_pln' in dane:
             # cena_pln jest za 1000 ark, więc dla 1 arkusza:
             cena_arkusz = dane['cena_pln'] / 1000
-            
+
             # Oblicz cena_za_m2 (zakładając arkusz B2 = 0.35 m²)
             cena_za_m2 = cena_arkusz / 0.35
-            
+
             # Arkusze: B2 (500x700mm = 0.35m²), A2 (420x594mm = 0.25m²)
-            uszlachetnienia_stare[nazwa] = {
+            czas_przygotowania = dane.get('czas_przygotowania_min')
+            if czas_przygotowania is None:
+                match = re.search(r'Czas:\s*(\d+)\s*min', dane.get('opis', ''))
+                czas_przygotowania = int(match.group(1)) if match else 45
+
+            rekord_uszl = {
                 'cena_za_m2': cena_za_m2,
                 'cena_za_arkusz_B2': cena_arkusz,
                 'cena_za_arkusz_A2': cena_arkusz * (0.25 / 0.35),  # proporcja powierzchni
-                'czas_przygotowania_min': 45,  # domyślnie
-                'jednostka': 'm²',
-                'typ': dane.get('typ', 'lakier')
+                'czas_przygotowania_min': czas_przygotowania,
+                'typ': dane.get('typ', 'lakier'),
+                # Pola wymagane przez nowy kalkulator
+                'cena_pln': dane['cena_pln'],
+                'jednostka': dane.get('jednostka', '1000 ark'),
+                'typ_jednostki': dane.get('typ_jednostki', 'sztukowa'),
+                'opis': dane.get('opis', '')
             }
+
+            # Zachowaj dodatkowe dane jeżeli istnieją (np. koszt matrycy)
+            for dodatkowe in ['koszt_matrycy']:
+                if dodatkowe in dane:
+                    rekord_uszl[dodatkowe] = dane[dodatkowe]
+
+            uszlachetnienia_stare[nazwa] = rekord_uszl
     slowniki_stare['uszlachetnienia'] = uszlachetnienia_stare
     
     # OBRÓBKA: cena_pln → stawka_godzinowa, wydajnosc_arkuszy_h
