@@ -706,6 +706,7 @@ $(document).ready(function() {
                     <table class="table table-sm">
                         <tr><td>Papier:</td><td class="text-end">${wynik.koszt_papieru.toFixed(2)} PLN</td></tr>
                         <tr><td>Druk:</td><td class="text-end">${wynik.koszt_druku.toFixed(2)} PLN</td></tr>
+                        ${wynik.koszt_czasu_druku && wynik.koszt_czasu_druku > 0 ? `<tr><td class="ps-4"><small>Czas druku:</small></td><td class="text-end"><small>${wynik.koszt_czasu_druku.toFixed(2)} PLN</small></td></tr>` : ''}
                         ${wynik.koszt_ciecia_papieru && wynik.koszt_ciecia_papieru > 0 ? `<tr><td><i class="fas fa-cut"></i> Cięcie papieru z B1:</td><td class="text-end">${wynik.koszt_ciecia_papieru.toFixed(2)} PLN</td></tr>` : ''}
                         ${wynik.koszt_kolorow_spec > 0 ? `<tr><td>Kolory specjalne:</td><td class="text-end">${wynik.koszt_kolorow_spec.toFixed(2)} PLN</td></tr>` : ''}
                         ${wynik.koszt_uszlachetnien > 0 ? `<tr><td>Uszlachetnienia:</td><td class="text-end">${wynik.koszt_uszlachetnien.toFixed(2)} PLN</td></tr>` : ''}
@@ -724,6 +725,7 @@ $(document).ready(function() {
                     <div class="row">
                         <div class="col-md-6">
                             <p><i class="fas fa-clock"></i> <strong>Czas realizacji:</strong> ${wynik.czas_realizacji_h.toFixed(1)} godz</p>
+                            ${wynik.czas_druku_h ? `<p class="ms-4 text-muted"><small>Czas druku: ${wynik.czas_druku_h.toFixed(2)} godz</small></p>` : ''}
                         </div>
                         <div class="col-md-6">
                             <p><i class="fas fa-weight"></i> <strong>Waga:</strong> ${wynik.waga_kg.toFixed(2)} kg</p>

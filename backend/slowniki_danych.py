@@ -411,6 +411,7 @@ FORMATY_ARKUSZY = {
 
 STAWKI_DRUKARNI = {
     "roboczogodzina_przygotowania": 85.0,
+    "roboczogodzina_druku": 85.0,
     "stawka_nakladu_1000_arkuszy": 55.0,
     "koszt_formy_drukowej": 45.0,
     "szybkosc_druku_arkuszy_h": 5000

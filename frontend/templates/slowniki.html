@@ -1244,6 +1244,7 @@ function renderujStawki() {
     let druku = stawki.roboczogodzina_druku || roboczogodzina;  // Fallback do przygotowania
     let forma = stawki.koszt_formy_drukowej || 45;
     let arkusze = stawki.stawka_nakladu_1000_arkuszy || 55;
+    let szybkosc = stawki.szybkosc_druku_arkuszy_h || 5000;
     
     let html = `
         <div class="alert alert-info mb-3">
@@ -1268,8 +1269,13 @@ function renderujStawki() {
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label"><strong>Koszt 1000 arkuszy (PLN):</strong></label>
-                <input type="number" class="form-control" id="stawka_arkusze" step="0.01" 
+                <input type="number" class="form-control" id="stawka_arkusze" step="0.01"
                        value="${arkusze}" required min="0.01">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label"><strong>Szybkość druku (arkuszy/h):</strong></label>
+                <input type="number" class="form-control" id="stawka_szybkosc" step="1"
+                       value="${szybkosc}" required min="1">
             </div>
         </div>
         <button class="btn btn-success" onclick="zapiszStawki()">
@@ -1286,7 +1292,8 @@ function zapiszStawki() {
         { klucz: 'roboczogodzina_przygotowania_pln', id: 'stawka_roboczogodzina', nazwa: 'Roboczogodzina przygotowania' },
         { klucz: 'roboczogodzina_druku_pln', id: 'stawka_druku', nazwa: 'Roboczogodzina druku' },
         { klucz: 'forma_offsetowa_pln', id: 'stawka_forma', nazwa: 'Forma offsetowa' },
-        { klucz: 'koszt_1000_arkuszy_pln', id: 'stawka_arkusze', nazwa: 'Koszt 1000 arkuszy' }
+        { klucz: 'koszt_1000_arkuszy_pln', id: 'stawka_arkusze', nazwa: 'Koszt 1000 arkuszy' },
+        { klucz: 'szybkosc_druku_arkuszy_h', id: 'stawka_szybkosc', nazwa: 'Szybkość druku (arkuszy/h)' }
     ];
     
     // Walidacja wszystkich pól
@@ -1311,7 +1318,10 @@ function zapiszStawki() {
     
     // Zapisz każdą stawkę osobno
     let promises = stawki.map(s => {
-        let wartosc = parseFloat($('#' + s.id).val());
+        let wartoscStr = $('#' + s.id).val();
+        let wartosc = s.id === 'stawka_szybkosc'
+            ? parseInt(wartoscStr, 10)
+            : parseFloat(wartoscStr);
         return $.ajax({
             url: `/api/slowniki/stawki/edytuj`,
             method: 'POST',

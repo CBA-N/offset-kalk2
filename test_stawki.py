@@ -38,6 +38,9 @@ try:
     
     manager.edytuj_stawke('koszt_1000_arkuszy_pln', 60.0)
     print("   ✅ koszt_1000_arkuszy: 60.0 PLN")
+
+    manager.edytuj_stawke('szybkosc_druku_arkuszy_h', 4500)
+    print("   ✅ szybkosc_druku_arkuszy_h: 4500 ark/h")
     
 except Exception as e:
     print(f"   ❌ BŁĄD: {e}")
@@ -48,6 +51,7 @@ stawki_new = manager.slowniki['stawki']
 print(f"   roboczogodzina_przygotowania: {stawki_new.get('roboczogodzina_przygotowania')}")
 print(f"   koszt_formy_drukowej: {stawki_new.get('koszt_formy_drukowej')}")
 print(f"   stawka_nakladu_1000_arkuszy: {stawki_new.get('stawka_nakladu_1000_arkuszy')}")
+print(f"   szybkosc_druku_arkuszy_h: {stawki_new.get('szybkosc_druku_arkuszy_h')}")
 
 # Test 2: Próba zapisania None
 print("\n4. TEST: Próba zapisania None (powinno być odrzucone)")
@@ -83,6 +87,8 @@ for k, v in stawki_orig.items():
         manager.edytuj_stawke('forma_offsetowa_pln', v)
     elif k == 'stawka_nakladu_1000_arkuszy':
         manager.edytuj_stawke('koszt_1000_arkuszy_pln', v)
+    elif k == 'szybkosc_druku_arkuszy_h':
+        manager.edytuj_stawke('szybkosc_druku_arkuszy_h', v)
 
 print("   ✅ Przywrócono oryginalne wartości")
 
