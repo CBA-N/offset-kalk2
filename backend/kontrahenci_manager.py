@@ -4,8 +4,9 @@ Manager kontrahentów - zarządzanie bazą klientów z zapisem do JSON
 
 import json
 import os
+from copy import deepcopy
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 
 class KontrahenciManager:
@@ -16,21 +17,42 @@ class KontrahenciManager:
         Args:
             plik_json: Ścieżka do pliku JSON z kontrahentami
         """
-        self.plik_json = plik_json
+        if os.path.isabs(plik_json):
+            self.plik_json = plik_json
+        else:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            self.plik_json = os.path.abspath(os.path.join(base_dir, plik_json))
+
+        katalog = os.path.dirname(self.plik_json)
+        if katalog:
+            os.makedirs(katalog, exist_ok=True)
+
         self.kontrahenci = self._zaladuj_kontrahentow()
         
     def _zaladuj_kontrahentow(self) -> List[Dict]:
         """Załaduj kontrahentów z pliku lub utwórz pustą listę"""
-        if os.path.exists(self.plik_json):
-            try:
-                with open(self.plik_json, 'r', encoding='utf-8') as f:
-                    kontrahenci = json.load(f)
-                    print(f"✅ Załadowano {len(kontrahenci)} kontrahentów")
-                    return kontrahenci
-            except Exception as e:
-                print(f"⚠️  Błąd wczytywania kontrahentów: {e}")
-                return []
-        return []
+        if not os.path.exists(self.plik_json):
+            return []
+
+        try:
+            with open(self.plik_json, 'r', encoding='utf-8') as f:
+                dane = json.load(f)
+        except Exception as e:
+            print(f"⚠️  Błąd wczytywania kontrahentów: {e}")
+            return []
+
+        if not isinstance(dane, list):
+            print("⚠️  Niepoprawny format danych kontrahentów – oczekiwano listy")
+            return []
+
+        wynik = []
+        for wpis in dane:
+            norm = self._normalizuj_kontrahenta(wpis) if isinstance(wpis, dict) else None
+            if norm is not None:
+                wynik.append(norm)
+
+        print(f"✅ Załadowano {len(wynik)} kontrahentów")
+        return wynik
     
     def zapisz_kontrahentow(self) -> bool:
         """Zapisz kontrahentów do pliku JSON"""
@@ -41,7 +63,7 @@ class KontrahenciManager:
         except Exception as e:
             print(f"❌ Błąd zapisu kontrahentów: {e}")
             return False
-    
+
     def dodaj_kontrahenta(self, dane: Dict) -> Dict:
         """
         Dodaj nowego kontrahenta
@@ -54,23 +76,24 @@ class KontrahenciManager:
         """
         # Dodaj timestamp
         teraz = datetime.now().isoformat()
-        dane['data_dodania'] = teraz
-        dane['ostatnia_modyfikacja'] = teraz
-        
+        dane_normalized = self._normalizuj_kontrahenta(dane)
+        dane_normalized['data_dodania'] = teraz
+        dane_normalized['ostatnia_modyfikacja'] = teraz
+
         # Dodaj ID
         if self.kontrahenci:
             max_id = max(k.get('id', 0) for k in self.kontrahenci)
-            dane['id'] = max_id + 1
+            dane_normalized['id'] = max_id + 1
         else:
-            dane['id'] = 1
-        
+            dane_normalized['id'] = 1
+
         # Dodaj na początek listy
-        self.kontrahenci.insert(0, dane)
-        
+        self.kontrahenci.insert(0, dane_normalized)
+
         # Zapisz do pliku
         self.zapisz_kontrahentow()
-        
-        return dane
+
+        return deepcopy(dane_normalized)
     
     def edytuj_kontrahenta(self, kontrahent_id: int, dane: Dict) -> Optional[Dict]:
         """
@@ -86,16 +109,23 @@ class KontrahenciManager:
         for i, kontrahent in enumerate(self.kontrahenci):
             if kontrahent.get('id') == kontrahent_id:
                 # Zachowaj ID i datę dodania
-                dane['id'] = kontrahent_id
-                dane['data_dodania'] = kontrahent.get('data_dodania')
-                dane['ostatnia_modyfikacja'] = datetime.now().isoformat()
-                
+                dane_normalized = self._normalizuj_kontrahenta(
+                    dane,
+                    domyslny={
+                        'id': kontrahent_id,
+                        'data_dodania': kontrahent.get('data_dodania')
+                    }
+                )
+                dane_normalized['id'] = kontrahent_id
+                dane_normalized['data_dodania'] = kontrahent.get('data_dodania')
+                dane_normalized['ostatnia_modyfikacja'] = datetime.now().isoformat()
+
                 # Zastąp kontrahenta
-                self.kontrahenci[i] = dane
+                self.kontrahenci[i] = dane_normalized
                 self.zapisz_kontrahentow()
-                
-                return dane
-        
+
+                return deepcopy(dane_normalized)
+
         return None
     
     def usun_kontrahenta(self, kontrahent_id: int) -> bool:
@@ -118,11 +148,12 @@ class KontrahenciManager:
     
     def pobierz_kontrahenta(self, kontrahent_id: int) -> Optional[Dict]:
         """Pobierz kontrahenta po ID"""
-        return next((k for k in self.kontrahenci if k.get('id') == kontrahent_id), None)
-    
+        kontrahent = next((k for k in self.kontrahenci if k.get('id') == kontrahent_id), None)
+        return deepcopy(kontrahent) if kontrahent else None
+
     def pobierz_wszystkich(self) -> List[Dict]:
         """Pobierz wszystkich kontrahentów"""
-        return self.kontrahenci
+        return [deepcopy(k) for k in self.kontrahenci]
     
     def szukaj(self, fraza: str) -> List[Dict]:
         """
@@ -135,27 +166,30 @@ class KontrahenciManager:
             Lista pasujących kontrahentów
         """
         if not fraza:
-            return self.kontrahenci
+            return [deepcopy(k) for k in self.kontrahenci]
         
         fraza_lower = fraza.lower()
         wyniki = []
-        
+
         for kontrahent in self.kontrahenci:
-            # Przeszukaj różne pola
+            adres = kontrahent.get('adres') or {}
             pola_do_przeszukania = [
                 kontrahent.get('nazwa', ''),
                 kontrahent.get('nip', ''),
-                kontrahent.get('adres_miasto', ''),
                 kontrahent.get('email', ''),
-                kontrahent.get('telefon', '')
+                kontrahent.get('telefon', ''),
+                kontrahent.get('osoba_kontaktowa', ''),
+                adres.get('miasto', ''),
+                adres.get('ulica', ''),
+                adres.get('kod_pocztowy', ''),
+                adres.get('wojewodztwo', ''),
             ]
-            
-            # Sprawdź czy któreś pole zawiera frazę
+
             for pole in pola_do_przeszukania:
                 if fraza_lower in str(pole).lower():
-                    wyniki.append(kontrahent)
+                    wyniki.append(deepcopy(kontrahent))
                     break
-        
+
         return wyniki
     
     def pobierz_statystyki(self) -> Dict:
@@ -169,8 +203,12 @@ class KontrahenciManager:
             }
         
         z_nip = sum(1 for k in self.kontrahenci if k.get('nip'))
-        miasta = list(set(k.get('adres_miasto', 'Nieznane') for k in self.kontrahenci))
-        
+        miasta = set()
+        for k in self.kontrahenci:
+            adres = k.get('adres') or {}
+            miasto = adres.get('miasto') or k.get('adres_miasto') or 'Nieznane'
+            miasta.add(miasto)
+
         return {
             'liczba_kontrahentow': len(self.kontrahenci),
             'z_nip': z_nip,
@@ -199,10 +237,12 @@ class KontrahenciManager:
             'nazwa': f"[USUNIĘTY #{kontrahent_id}]",
             'nip': "XXXXXXXXXX",
             'regon': "XXXXXXXXX",
-            'adres_ulica': "[USUNIĘTE]",
-            'adres_kod': "XX-XXX",
-            'adres_miasto': "[USUNIĘTE]",
-            'adres_wojewodztwo': "",
+            'adres': {
+                'ulica': "[USUNIĘTE]",
+                'kod_pocztowy': "XX-XXX",
+                'miasto': "[USUNIĘTE]",
+                'wojewodztwo': ""
+            },
             'email': "usuniete@example.com",
             'telefon': "XXX XXX XXX",
             'osoba_kontaktowa': "[USUNIĘTE]",
@@ -214,6 +254,45 @@ class KontrahenciManager:
             'data_dodania': kontrahent.get('data_dodania', ''),
             'ostatnia_modyfikacja': datetime.now().isoformat()
         }
-        
+
         # Edytuj kontrahenta
         return self.edytuj_kontrahenta(kontrahent_id, dane_anonim) is not None
+
+    def _normalizuj_kontrahenta(
+        self,
+        dane: Dict[str, Any],
+        domyslny: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Ujednolicenie struktury danych kontrahenta."""
+
+        wynik: Dict[str, Any] = {}
+        if domyslny:
+            wynik.update(domyslny)
+
+        wynik.update(deepcopy(dane))
+
+        # Zapewnij strukturę adresu
+        adres = wynik.get('adres')
+        if not isinstance(adres, dict):
+            adres = {}
+
+        adres = {
+            'ulica': adres.get('ulica') or wynik.pop('adres_ulica', ''),
+            'kod_pocztowy': adres.get('kod_pocztowy') or wynik.pop('adres_kod', ''),
+            'miasto': adres.get('miasto') or wynik.pop('adres_miasto', ''),
+            'wojewodztwo': adres.get('wojewodztwo') or wynik.pop('adres_wojewodztwo', ''),
+        }
+        wynik['adres'] = adres
+
+        # Usuń stare płaskie klucze jeśli pozostały
+        for klucz in ('adres_ulica', 'adres_kod', 'adres_miasto', 'adres_wojewodztwo'):
+            wynik.pop(klucz, None)
+
+        # Zadbaj o typ ID
+        if 'id' in wynik and wynik['id'] is not None:
+            try:
+                wynik['id'] = int(wynik['id'])
+            except (TypeError, ValueError):
+                wynik['id'] = None
+
+        return wynik
