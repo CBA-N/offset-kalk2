@@ -16,7 +16,13 @@ class KontrahenciManager:
         Args:
             plik_json: Ścieżka do pliku JSON z kontrahentami
         """
-        self.plik_json = plik_json
+        if os.path.isabs(plik_json):
+            self.plik_json = plik_json
+        else:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            self.plik_json = os.path.abspath(os.path.join(base_dir, plik_json))
+
+        os.makedirs(os.path.dirname(self.plik_json), exist_ok=True)
         self.kontrahenci = self._zaladuj_kontrahentow()
         
     def _zaladuj_kontrahentow(self) -> List[Dict]:
