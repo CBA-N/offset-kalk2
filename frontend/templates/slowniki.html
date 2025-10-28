@@ -292,32 +292,52 @@ function renderujWszystko() {
 // ==================== PAPIERY ====================
 
 function renderujPapiery() {
-    let html = '<div class="row">';
-    
-    for (let [nazwa, dane] of Object.entries(slowniki.papiery)) {
-        let gramatury = Array.isArray(dane.gramatury) ? dane.gramatury : Object.keys(dane.ceny).map(Number);
-        html += `
-            <div class="col-md-6 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">${nazwa}</h5>
-                        <p class="mb-1"><small><strong>Gramatury:</strong> ${gramatury.join(', ')} g/m²</small></p>
-                        <p class="mb-1"><small><strong>Liczba gramatur:</strong> ${gramatury.length}</small></p>
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-warning" onclick='edytujPapier(${JSON.stringify(nazwa)})'>
-                                <i class="fas fa-edit"></i> Edytuj
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick='usunPapier(${JSON.stringify(nazwa)})'>
-                                <i class="fas fa-trash"></i> Usuń
-                            </button>
-                        </div>
+    const entries = Object.entries(slowniki.papiery || {});
+
+    let rows = entries.map(([nazwa, dane]) => {
+        const gramatury = Array.isArray(dane.gramatury) ? dane.gramatury : Object.keys(dane.ceny).map(Number);
+        const gramaturyText = gramatury.length ? `${gramatury.join(', ')} g/m²` : '<span class="text-muted">Brak danych</span>';
+        return `
+            <tr>
+                <td>${nazwa}</td>
+                <td>${gramaturyText}</td>
+                <td>${gramatury.length}</td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
+                        <button type="button" class="btn btn-sm btn-warning" onclick='edytujPapier(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick='usunPapier(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
-                </div>
-            </div>
+                </td>
+            </tr>
         `;
+    }).join('');
+
+    if (!rows) {
+        rows = '<tr><td colspan="4" class="text-center text-muted">Brak papierów</td></tr>';
     }
-    
-    html += '</div>';
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Gramatury</th>
+                        <th>Liczba gramatur</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
     $('#listaPapierow').html(html);
 }
 
@@ -414,32 +434,55 @@ function usunPapier(nazwa) {
 // ==================== USZLACHETNIENIA ====================
 
 function renderujUszlachetnienia() {
-    let html = '<div class="row">';
-    
-    for (let [nazwa, dane] of Object.entries(slowniki.uszlachetnienia)) {
-        html += `
-            <div class="col-md-6 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">${nazwa}</h5>
-                        <p class="mb-1"><small><strong>Typ:</strong> ${dane.typ}</small></p>
-                        <p class="mb-1"><small><strong>Cena:</strong> ${dane.cena_pln} PLN/${dane.jednostka || '1000 ark'}</small></p>
-                        ${dane.opis ? `<p class="mb-1"><small>${dane.opis}</small></p>` : ''}
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-warning" onclick='edytujUszlachetnienie(${JSON.stringify(nazwa)})'>
-                                <i class="fas fa-edit"></i> Edytuj
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick='usunUszlachetnienie(${JSON.stringify(nazwa)})'>
-                                <i class="fas fa-trash"></i> Usuń
-                            </button>
-                        </div>
+    const entries = Object.entries(slowniki.uszlachetnienia || {});
+
+    let rows = entries.map(([nazwa, dane]) => {
+        const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak</span>';
+        return `
+            <tr>
+                <td>${nazwa}</td>
+                <td>${dane.typ || '-'}</td>
+                <td>${dane.cena_pln} PLN/${dane.jednostka || '1000 ark'}</td>
+                <td>${dane.typ_jednostki || '-'}</td>
+                <td>${opis}</td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
+                        <button type="button" class="btn btn-sm btn-warning" onclick='edytujUszlachetnienie(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick='usunUszlachetnienie(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
-                </div>
-            </div>
+                </td>
+            </tr>
         `;
+    }).join('');
+
+    if (!rows) {
+        rows = '<tr><td colspan="6" class="text-center text-muted">Brak uszlachetnień</td></tr>';
     }
-    
-    html += '</div>';
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Typ</th>
+                        <th>Cena</th>
+                        <th>Typ jednostki</th>
+                        <th>Opis</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
     $('#listaUszlachetnien').html(html);
 }
 
@@ -536,31 +579,55 @@ function usunUszlachetnienie(nazwa) {
 // ==================== OBRÓBKA ====================
 
 function renderujObrobke() {
-    let html = '<div class="row">';
-    
-    for (let [nazwa, dane] of Object.entries(slowniki.obrobka)) {
-        html += `
-            <div class="col-md-6 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">${nazwa}</h5>
-                        <p class="mb-1"><small><strong>Cena:</strong> ${dane.cena_pln} PLN/${dane.jednostka || '1000 szt'}</small></p>
-                        ${dane.opis ? `<p class="mb-1"><small>${dane.opis}</small></p>` : ''}
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-warning" onclick='edytujObrobke(${JSON.stringify(nazwa)})'>
-                                <i class="fas fa-edit"></i> Edytuj
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick='usunObrobke(${JSON.stringify(nazwa)})'>
-                                <i class="fas fa-trash"></i> Usuń
-                            </button>
-                        </div>
+    const entries = Object.entries(slowniki.obrobka || {});
+
+    let rows = entries.map(([nazwa, dane]) => {
+        const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak</span>';
+        return `
+            <tr>
+                <td>${nazwa}</td>
+                <td>${dane.jednostka || '1000 szt'}</td>
+                <td>${dane.cena_pln} PLN</td>
+                <td>${dane.typ_jednostki || '-'}</td>
+                <td>${opis}</td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
+                        <button type="button" class="btn btn-sm btn-warning" onclick='edytujObrobke(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick='usunObrobke(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
-                </div>
-            </div>
+                </td>
+            </tr>
         `;
+    }).join('');
+
+    if (!rows) {
+        rows = '<tr><td colspan="6" class="text-center text-muted">Brak obróbek</td></tr>';
     }
-    
-    html += '</div>';
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Jednostka</th>
+                        <th>Cena</th>
+                        <th>Typ jednostki</th>
+                        <th>Opis</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
     $('#listaObrobki').html(html);
 }
 
@@ -647,32 +714,53 @@ function usunObrobke(nazwa) {
 // ==================== KOLORY SPECJALNE ====================
 
 function renderujKolory() {
-    let html = '<div class="row">';
-    
-    for (let [nazwa, dane] of Object.entries(slowniki.kolory_specjalne)) {
-        html += `
-            <div class="col-md-6 mb-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">${nazwa}</h5>
-                        <p class="mb-1"><small><strong>Cena:</strong> ${dane.cena_pln} PLN</small></p>
-                        <p class="mb-1"><small><strong>Preparat:</strong> ${dane.cena_preperatu_pln} PLN</small></p>
-                        ${dane.opis ? `<p class="mb-1"><small>${dane.opis}</small></p>` : ''}
-                        <div class="mt-2">
-                            <button class="btn btn-sm btn-warning" onclick='edytujKolor(${JSON.stringify(nazwa)})'>
-                                <i class="fas fa-edit"></i> Edytuj
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick='usunKolor(${JSON.stringify(nazwa)})'>
-                                <i class="fas fa-trash"></i> Usuń
-                            </button>
-                        </div>
+    const entries = Object.entries(slowniki.kolory_specjalne || {});
+
+    let rows = entries.map(([nazwa, dane]) => {
+        const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak</span>';
+        return `
+            <tr>
+                <td>${nazwa}</td>
+                <td>${dane.cena_pln} PLN</td>
+                <td>${dane.cena_preperatu_pln} PLN</td>
+                <td>${opis}</td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
+                        <button type="button" class="btn btn-sm btn-warning" onclick='edytujKolor(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick='usunKolor(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
-                </div>
-            </div>
+                </td>
+            </tr>
         `;
+    }).join('');
+
+    if (!rows) {
+        rows = '<tr><td colspan="5" class="text-center text-muted">Brak kolorów specjalnych</td></tr>';
     }
-    
-    html += '</div>';
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Cena</th>
+                        <th>Cena preparatu</th>
+                        <th>Opis</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
     $('#listaKolorow').html(html);
 }
 
@@ -749,29 +837,51 @@ function usunKolor(nazwa) {
 // ==================== PAKOWANIE ====================
 
 function renderujPakowanie() {
-    let html = '<div class="list-group">';
-    
-    for (let [nazwa, dane] of Object.entries(slowniki.pakowanie)) {
-        html += `
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-1">${nazwa}</h6>
-                    <small class="text-muted">${dane.opis || 'Brak opisu'}</small>
-                    <br><small><strong>${dane.cena_pln} PLN</strong></small>
-                </div>
-                <div>
-                    <button class="btn btn-sm btn-warning" onclick='edytujPakowanie(${JSON.stringify(nazwa)})'>
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick='usunPakowanie(${JSON.stringify(nazwa)})'>
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
+    const entries = Object.entries(slowniki.pakowanie || {});
+
+    let rows = entries.map(([nazwa, dane]) => {
+        const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak opisu</span>';
+        return `
+            <tr>
+                <td>${nazwa}</td>
+                <td>${dane.cena_pln} PLN</td>
+                <td>${opis}</td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
+                        <button type="button" class="btn btn-sm btn-warning" onclick='edytujPakowanie(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick='usunPakowanie(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
         `;
+    }).join('');
+
+    if (!rows) {
+        rows = '<tr><td colspan="4" class="text-center text-muted">Brak opcji pakowania</td></tr>';
     }
-    
-    html += '</div>';
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Cena</th>
+                        <th>Opis</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
     $('#listaPakowania').html(html);
 }
 
@@ -842,29 +952,51 @@ function usunPakowanie(nazwa) {
 // ==================== TRANSPORT ====================
 
 function renderujTransport() {
-    let html = '<div class="list-group">';
-    
-    for (let [nazwa, dane] of Object.entries(slowniki.transport)) {
-        html += `
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-1">${nazwa}</h6>
-                    <small>${dane.opis || 'Brak opisu'}</small>
-                    <br><small><strong>${dane.cena_pln} PLN</strong></small>
-                </div>
-                <div>
-                    <button class="btn btn-sm btn-warning" onclick='edytujTransport(${JSON.stringify(nazwa)})'>
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick='usunTransport(${JSON.stringify(nazwa)})'>
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
+    const entries = Object.entries(slowniki.transport || {});
+
+    let rows = entries.map(([nazwa, dane]) => {
+        const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak opisu</span>';
+        return `
+            <tr>
+                <td>${nazwa}</td>
+                <td>${dane.cena_pln} PLN</td>
+                <td>${opis}</td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
+                        <button type="button" class="btn btn-sm btn-warning" onclick='edytujTransport(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick='usunTransport(${JSON.stringify(nazwa)})'>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
         `;
+    }).join('');
+
+    if (!rows) {
+        rows = '<tr><td colspan="4" class="text-center text-muted">Brak opcji transportu</td></tr>';
     }
-    
-    html += '</div>';
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Cena</th>
+                        <th>Opis</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
     $('#listaTransportu').html(html);
 }
 
@@ -935,38 +1067,53 @@ function usunTransport(nazwa) {
 // ==================== RODZAJE PRAC ====================
 
 function renderujRodzajePrac() {
-    const $lista = $('#listaRodzajowPrac');
-    $lista.empty();
-    
     const rodzaje = slowniki.rodzaje_prac || {};
-    const rodzajeArray = Object.entries(rodzaje);
-    
-    if (rodzajeArray.length === 0) {
-        $lista.html('<p class="text-muted">Brak zdefiniowanych rodzajów prac</p>');
-        return;
-    }
-    
-    rodzajeArray.forEach(([nazwa, dane]) => {
-        $lista.append(`
-            <div class="list-group-item">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="mb-1"><i class="fas fa-tag"></i> ${nazwa}</h6>
-                        <p class="mb-1"><strong>Wymiary:</strong> ${dane.szerokosc} × ${dane.wysokosc} mm</p>
-                        ${dane.opis ? `<p class="mb-0 text-muted">${dane.opis}</p>` : ''}
-                    </div>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-warning" onclick="edytujRodzajPracy('${nazwa.replace(/'/g, "\\'")}')">
+    const entries = Object.entries(rodzaje);
+
+    let rows = entries.map(([nazwa, dane]) => {
+        const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak</span>';
+        return `
+            <tr>
+                <td><i class="fas fa-tag me-1"></i>${nazwa}</td>
+                <td>${dane.szerokosc} × ${dane.wysokosc} mm</td>
+                <td>${opis}</td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
+                        <button type="button" class="btn btn-sm btn-warning" onclick='edytujRodzajPracy(${JSON.stringify(nazwa)})'>
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="usunRodzajPracy('${nazwa.replace(/'/g, "\\'")}')">
+                        <button type="button" class="btn btn-sm btn-danger" onclick='usunRodzajPracy(${JSON.stringify(nazwa)})'>
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
-                </div>
-            </div>
-        `);
-    });
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    if (!rows) {
+        rows = '<tr><td colspan="4" class="text-center text-muted">Brak zdefiniowanych rodzajów prac</td></tr>';
+    }
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Wymiary</th>
+                        <th>Opis</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    $('#listaRodzajowPrac').html(html);
 }
 
 function pokazFormularzRodzajuPracy(nazwa = null) {
