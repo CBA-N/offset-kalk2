@@ -60,12 +60,14 @@ class KalkulacjaZlecenia:
     koszt_ciecia_papieru: float = 0  # Nowe pole: koszt cięcia z B1
     koszt_pakowania: float = 0
     koszt_transportu: float = 0
-    
+    koszt_czasu_druku: float = 0
+
     suma_kosztow_netto: float = 0
     cena_z_marza_netto: float = 0
     cena_brutto_vat23: float = 0
-    
+
     czas_realizacji_h: float = 0
+    czas_druku_h: float = 0
     waga_kg: float = 0
 
 
@@ -148,6 +150,10 @@ class KalkulatorDruku:
         
         # Wagi z priorytetu
         wagi = self.priorytety[priorytet]
+
+        szybkosc_ark_h = self.stawki.get('szybkosc_druku_arkuszy_h')
+        if not szybkosc_ark_h or szybkosc_ark_h <= 0:
+            raise ValueError("Szybkość druku musi być dodatnia. Ustaw ją w słowniku stawek drukarni.")
         
         for nazwa_formatu, dane_formatu in self.formaty.items():
             format_ark = (dane_formatu['szerokosc_mm'], dane_formatu['wysokosc_mm'])
@@ -169,8 +175,7 @@ class KalkulatorDruku:
             koszt_papieru = ilosc_arkuszy_z_odpadami * waga_arkusza_kg * cena_kg
             
             # Czas produkcji
-            szybkosc = self.stawki['szybkosc_druku_arkuszy_h']
-            czas_produkcji = ilosc_arkuszy_z_odpadami / szybkosc
+            czas_produkcji = ilosc_arkuszy_z_odpadami / szybkosc_ark_h
             
             # Normalizacja do 0-1 dla scoringu
             # Im mniej odpady/koszt/czas tym lepiej, więc odwracamy
@@ -214,11 +219,18 @@ class KalkulatorDruku:
         """
         # Przygotowanie (czas × stawka)
         czas_przygotowania_h = 1.0  # Standardowo 1h
-        koszt_przygotowania = czas_przygotowania_h * self.stawki['roboczogodzina_przygotowania']
-        
+        stawka_przygotowania = self.stawki.get('roboczogodzina_przygotowania')
+        if not stawka_przygotowania or stawka_przygotowania <= 0:
+            raise ValueError("Roboczogodzina przygotowania musi być dodatnia. Ustaw ją w słowniku stawek drukarni.")
+        koszt_przygotowania = czas_przygotowania_h * stawka_przygotowania
+
+        szybkosc = self.stawki.get('szybkosc_druku_arkuszy_h')
+        if not szybkosc or szybkosc <= 0:
+            raise ValueError("Szybkość druku musi być dodatnia. Ustaw ją w słowniku stawek drukarni.")
+
         # Formy drukowe
         koszt_form = ilosc_form * self.stawki['koszt_formy_drukowej']
-        
+
         # Przeloty
         if kolorystyka == '4+0':
             przeloty = ilosc_arkuszy  # Jednostronny
@@ -230,15 +242,25 @@ class KalkulatorDruku:
             przeloty = ilosc_arkuszy
         
         koszt_przelotow = (przeloty / 1000) * self.stawki['stawka_nakladu_1000_arkuszy']
-        
-        koszt_calkowity = koszt_przygotowania + koszt_form + koszt_przelotow
-        
+
+        stawka_druku_h = self.stawki.get('roboczogodzina_druku', stawka_przygotowania)
+        if not stawka_druku_h or stawka_druku_h <= 0:
+            raise ValueError("Roboczogodzina druku musi być dodatnia. Ustaw ją w słowniku stawek drukarni.")
+        czas_druku_h = ilosc_arkuszy / szybkosc
+        koszt_czasu_druku = czas_druku_h * stawka_druku_h
+
+        koszt_calkowity = koszt_przygotowania + koszt_form + koszt_przelotow + koszt_czasu_druku
+
         return {
             'przygotowanie': koszt_przygotowania,
             'formy': koszt_form,
             'przeloty': koszt_przelotow,
+            'czas_druku_h': czas_druku_h,
+            'koszt_czasu_druku': koszt_czasu_druku,
             'razem': koszt_calkowity,
-            'czas_h': czas_przygotowania_h + (ilosc_arkuszy / self.stawki['szybkosc_druku_arkuszy_h'])
+            'czas_h': czas_przygotowania_h + czas_druku_h,
+            'czas_przygotowania_h': czas_przygotowania_h,
+            'szybkosc_druku_arkuszy_h': szybkosc
         }
     
     def kalkuluj_kolory_specjalne(self, lista_kolorow: List[str]) -> Dict[str, float]:
@@ -610,12 +632,14 @@ class KalkulatorDruku:
             koszt_ciecia_papieru=kalk_ciecie['koszt'],  # Nowe pole: koszt cięcia
             koszt_pakowania=kalk_pak_trans['pakowanie'],
             koszt_transportu=kalk_pak_trans['transport'],
-            
+            koszt_czasu_druku=kalk_druku['koszt_czasu_druku'],
+
             suma_kosztow_netto=suma_netto,
             cena_z_marza_netto=cena_z_marza,
             cena_brutto_vat23=cena_brutto,
-            
+
             czas_realizacji_h=czas_razem,
+            czas_druku_h=kalk_druku['czas_druku_h'],
             waga_kg=waga_kg,
             
             # Kontrahent (v1.2)
@@ -659,6 +683,8 @@ def drukuj_oferte(kalkulacja: KalkulacjaZlecenia):
     print(f"\n💰 KALKULACJA KOSZTÓW:")
     print(f"   • Papier:              {kalkulacja.koszt_papieru:>10.2f} PLN")
     print(f"   • Druk:                {kalkulacja.koszt_druku:>10.2f} PLN")
+    if kalkulacja.koszt_czasu_druku > 0:
+        print(f"       • Czas druku:       {kalkulacja.koszt_czasu_druku:>10.2f} PLN")
     if kalkulacja.koszt_kolorow_spec > 0:
         print(f"   • Kolory specjalne:    {kalkulacja.koszt_kolorow_spec:>10.2f} PLN")
     if kalkulacja.koszt_uszlachetnien > 0:

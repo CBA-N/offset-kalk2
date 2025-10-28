@@ -590,8 +590,8 @@ class SlownikiManager:
         if not isinstance(wartosc, (int, float)):
             raise ValueError(f"Wartość dla '{klucz}' musi być liczbą")
         
-        # Walidacja wartości dodatniej (z wyjątkiem szybkości druku)
-        if wartosc <= 0 and klucz != 'szybkosc_druku_arkuszy_h':
+        # Walidacja wartości dodatniej
+        if wartosc <= 0:
             raise ValueError(f"Stawka '{klucz}' musi być dodatnia (otrzymano: {wartosc})")
         
         klucz_realny = stawki_map[klucz]
