@@ -327,15 +327,24 @@ function pokazFormularzPapieru(nazwa = null) {
     let dane = nazwa ? slowniki.papiery[nazwa] : null;
     let gramatury = dane ? (Array.isArray(dane.gramatury) ? dane.gramatury : Object.keys(dane.ceny).map(Number)) : [];
     let ceny = dane ? dane.ceny : {};
-    
+    let kategoria = dane ? (dane.kategoria || '') : '';
+    let kategorie = [...new Set(Object.values(slowniki.papiery).map(p => p.kategoria).filter(Boolean))].sort();
+
     let html = `
         <div class="mb-3">
             <label class="form-label">Nazwa papieru</label>
             <input type="text" class="form-control" id="form_nazwa" value="${nazwa || ''}" ${nazwa ? 'readonly' : ''}>
         </div>
         <div class="mb-3">
+            <label class="form-label">Kategoria</label>
+            <select class="form-select" id="form_kategoria">
+                <option value="">Wybierz kategorię</option>
+                ${kategorie.map(k => `<option value="${k}" ${k === kategoria ? 'selected' : ''}>${k}</option>`).join('')}
+            </select>
+        </div>
+        <div class="mb-3">
             <label class="form-label">Gramatury (g/m²) - oddzielone przecinkami</label>
-            <input type="text" class="form-control" id="form_gramatury" 
+            <input type="text" class="form-control" id="form_gramatury"
                    value="${gramatury.join(', ')}" placeholder="80, 90, 100, 115, 130">
             <small class="text-muted">Przykład: 80, 90, 100, 115, 130</small>
         </div>
@@ -356,10 +365,11 @@ function pokazFormularzPapieru(nazwa = null) {
 
 function zapiszPapier(staraNazwa) {
     let nazwa = $('#form_nazwa').val().trim();
+    let kategoria = $('#form_kategoria').val();
     let gramaturyStr = $('#form_gramatury').val().trim();
     let cenyStr = $('#form_ceny').val().trim();
-    
-    if (!nazwa || !gramaturyStr || !cenyStr) {
+
+    if (!nazwa || !kategoria || !gramaturyStr || !cenyStr) {
         pokazBlad('Wszystkie pola są wymagane');
         return;
     }
@@ -380,10 +390,11 @@ function zapiszPapier(staraNazwa) {
     let operacja = staraNazwa ? 'edytuj' : 'dodaj';
     let dane = {
         nazwa: nazwa,
+        kategoria: kategoria,
         gramatury: gramatury,
         ceny: ceny
     };
-    
+
     if (staraNazwa) {
         dane.stara_nazwa = staraNazwa;
         if (staraNazwa !== nazwa) {
