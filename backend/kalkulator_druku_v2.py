@@ -5,6 +5,7 @@ Zautomatyzowany kalkulator z optymalizacją formatu
 
 import json
 import math
+import re
 from typing import Dict, List, Tuple
 from dataclasses import dataclass, asdict
 from slowniki_danych import *
@@ -266,50 +267,59 @@ class KalkulatorDruku:
         for uszlachetnienie in lista_uszlachetnien:
             if uszlachetnienie in self.uszlachetnienia:
                 dane = self.uszlachetnienia[uszlachetnienie]
-                cena_pln = dane.get('cena_pln', 0)
-                typ_jednostki = dane.get('typ_jednostki', 'sztukowa')  # domyślnie sztukowa
-                
-                # Obliczenie kosztu w zależności od typu jednostki
-                if typ_jednostki == 'sztukowa':
-                    # Np. "150 PLN / 1000 ark" -> parsuj liczbę z jednostki
-                    jednostka_str = dane.get('jednostka', '1000 ark')
-                    import re
-                    match = re.search(r'(\d+)', jednostka_str)
-                    mnoznik = int(match.group(1)) if match else 1000
-                    koszt += cena_pln * (naklad / mnoznik)
-                    
-                elif typ_jednostki == 'metrowa':
-                    # Np. "200 PLN / 1 m²" -> parsuj liczbę z jednostki
-                    jednostka_str = dane.get('jednostka', '1 m²')
-                    import re
-                    match = re.search(r'([\d.]+)', jednostka_str)
-                    mnoznik_m2 = float(match.group(1)) if match else 1.0
-                    powierzchnia_calkowita_m2 = powierzchnia_arkusza * ilosc_arkuszy
-                    koszt += cena_pln * (powierzchnia_calkowita_m2 / mnoznik_m2)
-                    
-                elif typ_jednostki == 'wagowa':
-                    # Np. "50 PLN / 1 kg" -> parsuj liczbę z jednostki
-                    jednostka_str = dane.get('jednostka', '1 kg')
-                    import re
-                    match = re.search(r'([\d.]+)', jednostka_str)
-                    mnoznik_kg = float(match.group(1)) if match else 1.0
-                    koszt += cena_pln * (waga_kg / mnoznik_kg)
-                
+
+                cena_pln = dane.get('cena_pln')
+                typ_jednostki = dane.get('typ_jednostki')
+                jednostka_str = dane.get('jednostka', '')
+
+                if cena_pln is not None and typ_jednostki:
+                    jednostka_wartosc = 1.0
+                    match = re.search(r'([\d.,]+)', jednostka_str)
+                    if match:
+                        jednostka_wartosc = float(match.group(1).replace(',', '.')) or 1.0
+
+                    if typ_jednostki == 'sztukowa':
+                        ilosc_bazowa = 0
+                        jednostka_lower = jednostka_str.lower()
+                        if 'ark' in jednostka_lower:
+                            ilosc_bazowa = ilosc_arkuszy or 0
+                        else:
+                            ilosc_bazowa = naklad or 0
+                        if ilosc_bazowa == 0:
+                            ilosc_bazowa = ilosc_arkuszy or naklad
+                        if ilosc_bazowa is None:
+                            ilosc_bazowa = 0
+                        koszt += cena_pln * (ilosc_bazowa / jednostka_wartosc)
+
+                    elif typ_jednostki == 'metrowa':
+                        powierzchnia_calkowita_m2 = powierzchnia_arkusza * ilosc_arkuszy
+                        koszt += cena_pln * (powierzchnia_calkowita_m2 / jednostka_wartosc)
+
+                    elif typ_jednostki == 'wagowa':
+                        koszt += cena_pln * (waga_kg / jednostka_wartosc)
+
+                    else:
+                        koszt += cena_pln
+                else:
+                    # Zgodność wsteczna: użyj starych pól jeśli brak nowych
+                    if 'cena_za_arkusz_B2' in dane:
+                        koszt += dane['cena_za_arkusz_B2'] * ilosc_arkuszy
+                    elif 'cena_za_m2' in dane:
+                        koszt += dane['cena_za_m2'] * powierzchnia_arkusza * ilosc_arkuszy
+
                 # Koszt matrycy jeśli istnieje
                 if 'koszt_matrycy' in dane:
                     koszt += dane['koszt_matrycy']
-                
+
                 # Czas przygotowania (wydobycie z opisu lub wartość domyślna)
                 if 'czas_przygotowania_min' in dane:
                     czas += dane['czas_przygotowania_min'] / 60
                 else:
-                    # Parsowanie z opisu: "Czas: 40 min"
-                    import re
                     opis = dane.get('opis', '')
                     match = re.search(r'Czas:\s*(\d+)\s*min', opis)
                     if match:
                         czas += int(match.group(1)) / 60
-        
+
         return {'koszt': koszt, 'czas_h': czas}
     
     def kalkuluj_obrobke(self,
