@@ -40,16 +40,21 @@
     <!-- Filtrowanie -->
     <div class="card mb-3">
         <div class="card-body">
-            <div class="row">
-                <div class="col-md-4">
+            <div class="row g-2">
+                <div class="col-lg-3 col-md-6">
                     <input type="text" class="form-control" id="searchInput" placeholder="Szukaj po nazwie produktu...">
                 </div>
-                <div class="col-md-3">
+                <div class="col-lg-3 col-md-6">
                     <select class="form-select" id="filterPapier">
                         <option value="">Wszystkie papiery</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-lg-3 col-md-6">
+                    <select class="form-select" id="filterKontrahent">
+                        <option value="">Wszyscy kontrahenci</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-6">
                     <select class="form-select" id="sortBy">
                         <option value="data-desc">Najnowsze</option>
                         <option value="data-asc">Najstarsze</option>
@@ -57,8 +62,8 @@
                         <option value="cena-asc">Najtańsze</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button class="btn btn-danger w-100" onclick="wyczyscHistorie()">
+                <div class="col-lg-1 col-md-6 d-grid">
+                    <button class="btn btn-danger" onclick="wyczyscHistorie()">
                         <i class="fas fa-trash"></i> Wyczyść
                     </button>
                 </div>
@@ -112,6 +117,7 @@ $(document).ready(function() {
     // Event handlers
     $('#searchInput').on('input', filtrowanieLista);
     $('#filterPapier').on('change', filtrowanieLista);
+    $('#filterKontrahent').on('change', filtrowanieLista);
     $('#sortBy').on('change', sortujListe);
 });
 
@@ -122,19 +128,35 @@ function zaladujHistorie() {
         if (oferty.length === 0) {
             $('#pustystan').show();
             $('#listaOfert').hide();
+            $('#filterPapier').html('<option value="">Wszystkie papiery</option>');
+            $('#filterKontrahent').html('<option value="">Wszyscy kontrahenci</option>');
         } else {
             $('#pustystan').hide();
             $('#listaOfert').show();
             
             // Wypełnij filtr papierów
-            const papiery = [...new Set(oferty.map(o => o.rodzaj_papieru))];
-            let options = '<option value="">Wszystkie papiery</option>';
+            const papiery = [...new Set(oferty.map(o => o.rodzaj_papieru).filter(Boolean))];
+            let papierOptions = '<option value="">Wszystkie papiery</option>';
+            papiery.sort((a, b) => a.localeCompare(b, 'pl', { sensitivity: 'base' }));
             papiery.forEach(p => {
-                options += `<option value="${p}">${p}</option>`;
+                papierOptions += `<option value="${p}">${p}</option>`;
             });
-            $('#filterPapier').html(options);
-            
+            $('#filterPapier').html(papierOptions);
+
+            const kontrahenci = [...new Set(oferty
+                .filter(o => o.kontrahent && o.kontrahent.nazwa)
+                .map(o => o.kontrahent.nazwa.trim())
+                .filter(Boolean)
+            )];
+            kontrahenci.sort((a, b) => a.localeCompare(b, 'pl', { sensitivity: 'base' }));
+            let kontrahentOptions = '<option value="">Wszyscy kontrahenci</option>';
+            kontrahenci.forEach(k => {
+                kontrahentOptions += `<option value="${k}">${k}</option>`;
+            });
+            $('#filterKontrahent').html(kontrahentOptions);
+
             renderujListe();
+            filtrowanieLista();
         }
     });
 }
@@ -209,24 +231,34 @@ function renderujListe() {
 function filtrowanieLista() {
     const search = $('#searchInput').val().toLowerCase();
     const papier = $('#filterPapier').val();
-    
+    const kontrahent = ($('#filterKontrahent').val() || '').toLowerCase();
+
     $('.oferta-card').each(function() {
         const id = $(this).data('id');
         const oferta = oferty.find(o => o.id === id);
-        
+
         let pokazuj = true;
-        
+
         if (search) {
-            const searchText = `${oferta.id} ${oferta.rodzaj_papieru || ''} ${oferta.format_druku || ''}`.toLowerCase();
+            const searchText = `${oferta.id} ${oferta.rodzaj_papieru || ''} ${oferta.format_druku || ''} ${oferta.nazwa_produktu || ''} ${(oferta.kontrahent && oferta.kontrahent.nazwa) ? oferta.kontrahent.nazwa : ''}`.toLowerCase();
             if (!searchText.includes(search)) {
                 pokazuj = false;
             }
         }
-        
+
         if (papier && oferta.rodzaj_papieru !== papier) {
             pokazuj = false;
         }
-        
+
+        if (kontrahent) {
+            const nazwaKontrahenta = oferta.kontrahent && oferta.kontrahent.nazwa
+                ? oferta.kontrahent.nazwa.toLowerCase()
+                : '';
+            if (nazwaKontrahenta !== kontrahent) {
+                pokazuj = false;
+            }
+        }
+
         if (pokazuj) {
             $(this).show();
         } else {
