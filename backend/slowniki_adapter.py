@@ -76,21 +76,41 @@ def adapter_nowy_do_starego(slowniki_nowe: dict) -> dict:
     obrobka_stara = {}
     for nazwa, dane in slowniki_nowe.get('obrobka', {}).items():
         if 'cena_pln' in dane:
-            # cena_pln jest za 1000 ark
-            # Zakładamy: stawka = 80 PLN/h, wydajność = stawka / (cena_pln/1000)
-            cena_za_ark = dane['cena_pln'] / 1000
+            # cena_pln jest za jednostkę (np. 1000 arkuszy)
+            # Zachowujemy dane jednostki, aby kalkulator mógł skalować koszt
+            jednostka = dane.get('jednostka', '1000 ark')
+            typ_jednostki = dane.get('typ_jednostki', 'sztukowa')
+            kod_jednostki = dane.get('kod_jednostki')
+
+            # Zachowaj także pola wykorzystywane przez starsze wersje kalkulatora
+            jednostka_match = re.search(r'([\d.,]+)', jednostka)
+            try:
+                jednostka_wartosc = float(jednostka_match.group(1).replace(',', '.')) if jednostka_match else 1000.0
+            except ValueError:
+                jednostka_wartosc = 1000.0
+            if jednostka_wartosc == 0:
+                jednostka_wartosc = 1.0
+
+            cena_za_ark = dane['cena_pln'] / jednostka_wartosc if jednostka_wartosc else dane['cena_pln']
             stawka_godzinowa = 80.0  # standard
             wydajnosc = stawka_godzinowa / cena_za_ark if cena_za_ark > 0 else 2000
-            
+
             obrobka_stara[nazwa] = {
                 'stawka_godzinowa': stawka_godzinowa,
                 'wydajnosc_arkuszy_h': wydajnosc,
                 'koszt_przygotowania': 20.0,  # domyślnie
-                'jednostka': 'arkusz',
-                'typ': 'obrobka'
+                'jednostka': jednostka,
+                'typ': 'obrobka',
+                # Pola wymagane przez nowy kalkulator
+                'cena_pln': dane['cena_pln'],
+                'typ_jednostki': typ_jednostki,
+                'kod_jednostki': kod_jednostki,
+                'opis': dane.get('opis', ''),
             }
-            if dane.get('kod_jednostki'):
-                obrobka_stara[nazwa]['kod_jednostki'] = dane['kod_jednostki']
+
+            # Usuń puste klucze aby uniknąć nadpisywania None
+            if obrobka_stara[nazwa]['kod_jednostki'] is None:
+                del obrobka_stara[nazwa]['kod_jednostki']
     slowniki_stare['obrobka'] = obrobka_stara
     
     # KOLORY SPECJALNE: cena_pln → koszt_za_kolor
