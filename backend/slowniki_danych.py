@@ -1676,6 +1676,29 @@ PAPIERY = {
     }
 }
 
+KATEGORIE_PAPIERU = {
+    "powlekany": {
+        "nazwa": "Powlekany",
+        "opis": "Papiery kredowe z połyskiem lub matowe"
+    },
+    "niepowlekany": {
+        "nazwa": "Niepowlekany",
+        "opis": "Papiery offsetowe i niepowlekane"
+    },
+    "karton": {
+        "nazwa": "Karton",
+        "opis": "Kartony i tektury lite"
+    },
+    "specjalny": {
+        "nazwa": "Specjalny",
+        "opis": "Materiały samoklejące i niestandardowe"
+    },
+    "ekologiczny": {
+        "nazwa": "Ekologiczny",
+        "opis": "Papiery z recyklingu i ekologiczne"
+    }
+}
+
 USZLACHETNIENIA = {
     "Lakier UV całościowy": {
         "typ": "lakier",

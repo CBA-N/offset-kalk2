@@ -17,6 +17,11 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
+            <button class="nav-link" id="kategorie-tab" data-bs-toggle="tab" data-bs-target="#kategorie" type="button">
+                <i class="fas fa-tags"></i> Kategorie Papieru
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
             <button class="nav-link" id="uszlachetnienia-tab" data-bs-toggle="tab" data-bs-target="#uszlachetnienia" type="button">
                 <i class="fas fa-star"></i> Uszlachetnienia
             </button>
@@ -76,6 +81,21 @@
                 </div>
                 <div class="card-body">
                     <div id="listaPapierow"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kategorie papieru -->
+        <div class="tab-pane fade" id="kategorie" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Kategorie Papieru</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzKategorii()">
+                        <i class="fas fa-plus"></i> Dodaj Kategorię
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="listaKategoriiPapieru"></div>
                 </div>
             </div>
         </div>
@@ -301,6 +321,7 @@ function zaladujSlowniki() {
 
 function renderujWszystko() {
     renderujPapiery();
+    renderujKategoriePapieru();
     renderujJednostki();
     renderujUszlachetnienia();
     renderujObrobke();
@@ -316,13 +337,29 @@ function renderujWszystko() {
 
 function renderujPapiery() {
     const entries = Object.entries(slowniki.papiery || {});
+    const kategorie = slowniki.kategorie_papieru || {};
 
     let rows = entries.map(([nazwa, dane]) => {
-        const gramatury = Array.isArray(dane.gramatury) ? dane.gramatury : Object.keys(dane.ceny).map(Number);
+        const gramatury = Array.isArray(dane.gramatury) ? dane.gramatury : Object.keys(dane.ceny || {}).map(Number);
         const gramaturyText = gramatury.length ? `${gramatury.join(', ')} g/m²` : '<span class="text-muted">Brak danych</span>';
+        const kategoriaId = dane.kategoria || '';
+        const rekordKategorii = kategorie[kategoriaId];
+        let kategoriaHtml = '<span class="text-muted">Nieprzypisana</span>';
+
+        if (kategoriaId) {
+            if (rekordKategorii) {
+                const opis = rekordKategorii.opis ? ` title="${rekordKategorii.opis.replace(/"/g, '&quot;')}"` : '';
+                const nazwaKategorii = rekordKategorii.nazwa || kategoriaId;
+                kategoriaHtml = `<span${opis}>${nazwaKategorii}</span>`;
+            } else {
+                kategoriaHtml = `<span class="text-warning" title="Kategoria nie istnieje w słowniku">${kategoriaId}</span>`;
+            }
+        }
+
         return `
             <tr>
                 <td>${nazwa}</td>
+                <td>${kategoriaHtml}</td>
                 <td>${gramaturyText}</td>
                 <td>${gramatury.length}</td>
                 <td class="text-end">
@@ -340,7 +377,7 @@ function renderujPapiery() {
     }).join('');
 
     if (!rows) {
-        rows = '<tr><td colspan="4" class="text-center text-muted">Brak papierów</td></tr>';
+        rows = '<tr><td colspan="5" class="text-center text-muted">Brak papierów</td></tr>';
     }
 
     const html = `
@@ -349,6 +386,7 @@ function renderujPapiery() {
                 <thead>
                     <tr>
                         <th>Nazwa</th>
+                        <th>Kategoria</th>
                         <th>Gramatury</th>
                         <th>Liczba gramatur</th>
                         <th class="text-end">Akcje</th>
@@ -366,12 +404,16 @@ function renderujPapiery() {
 
 function pokazFormularzPapieru(nazwa = null) {
     aktualnaDane = { kategoria: 'papiery', nazwa: nazwa };
-    
+
     let dane = nazwa ? slowniki.papiery[nazwa] : null;
     let gramatury = dane ? (Array.isArray(dane.gramatury) ? dane.gramatury : Object.keys(dane.ceny).map(Number)) : [];
     let ceny = dane ? dane.ceny : {};
     let kategoria = dane ? (dane.kategoria || '') : '';
-    let kategorie = [...new Set(Object.values(slowniki.papiery).map(p => p.kategoria).filter(Boolean))].sort();
+    let kategorieEntries = Object.entries(slowniki.kategorie_papieru || {});
+
+    if (kategoria && !(slowniki.kategorie_papieru || {})[kategoria]) {
+        kategorieEntries.push([kategoria, { nazwa: kategoria, opis: '' }]);
+    }
 
     let html = `
         <div class="mb-3">
@@ -382,8 +424,20 @@ function pokazFormularzPapieru(nazwa = null) {
             <label class="form-label">Kategoria</label>
             <select class="form-select" id="form_kategoria">
                 <option value="">Wybierz kategorię</option>
-                ${kategorie.map(k => `<option value="${k}" ${k === kategoria ? 'selected' : ''}>${k}</option>`).join('')}
+                ${kategorieEntries.map(([id, kat]) => {
+                    const nazwaKat = (kat && kat.nazwa) ? kat.nazwa : id;
+                    const selected = id === kategoria ? 'selected' : '';
+                    return `<option value="${id}" ${selected}>${nazwaKat}</option>`;
+                }).join('')}
+                <option value="__nowa__">+ Dodaj nową kategorię</option>
             </select>
+            <div class="mt-2" id="nowaKategoriaWrapper" style="display: none;">
+                <label class="form-label">Nowa kategoria</label>
+                <input type="text" class="form-control" id="form_nowa_kategoria" placeholder="Np. Premium">
+                <label class="form-label mt-2">Opis kategorii (opcjonalnie)</label>
+                <textarea class="form-control" id="form_opis_kategorii" rows="2" placeholder="Krótki opis pomagający w klasyfikacji"></textarea>
+                <small class="text-muted">Nowa kategoria zostanie dodana do słownika i będzie dostępna dla innych papierów.</small>
+            </div>
         </div>
         <div class="mb-3">
             <label class="form-label">Gramatury (g/m²) - oddzielone przecinkami</label>
@@ -393,15 +447,29 @@ function pokazFormularzPapieru(nazwa = null) {
         </div>
         <div class="mb-3">
             <label class="form-label">Ceny (PLN/kg) - oddzielone przecinkami, w kolejności gramatur</label>
-            <input type="text" class="form-control" id="form_ceny" 
-                   value="${gramatury.map(g => ceny[g] || '').join(', ')}" placeholder="5.20, 5.40, 5.60, 5.80, 6.00">
+            <input type="text" class="form-control" id="form_ceny"
+                   value="${gramatury.map(g => (ceny[g] ?? ceny[String(g)] ?? '')).join(', ')}" placeholder="5.20, 5.40, 5.60, 5.80, 6.00">
             <small class="text-muted">Przykład: 5.20, 5.40, 5.60 (tyle samo wartości co gramatur)</small>
         </div>
     `;
-    
+
     $('#formularzTytul').text(nazwa ? `Edytuj papier: ${nazwa}` : 'Dodaj nowy papier');
     $('#formularzTresc').html(html);
-    
+
+    const $selectKategorii = $('#form_kategoria');
+    const $nowaKategoria = $('#nowaKategoriaWrapper');
+
+    function toggleNowaKategoria() {
+        if ($selectKategorii.val() === '__nowa__') {
+            $nowaKategoria.show();
+        } else {
+            $nowaKategoria.hide();
+        }
+    }
+
+    toggleNowaKategoria();
+    $selectKategorii.on('change', toggleNowaKategoria);
+
     $('#zapiszFormularz').off('click').on('click', () => zapiszPapier(nazwa));
     modal.show();
 }
@@ -409,6 +477,8 @@ function pokazFormularzPapieru(nazwa = null) {
 function zapiszPapier(staraNazwa) {
     let nazwa = $('#form_nazwa').val().trim();
     let kategoria = $('#form_kategoria').val();
+    let nowaKategoriaNazwa = $('#form_nowa_kategoria').val() ? $('#form_nowa_kategoria').val().trim() : '';
+    let nowaKategoriaOpis = $('#form_opis_kategorii').val() ? $('#form_opis_kategorii').val().trim() : '';
     let gramaturyStr = $('#form_gramatury').val().trim();
     let cenyStr = $('#form_ceny').val().trim();
 
@@ -416,26 +486,169 @@ function zapiszPapier(staraNazwa) {
         pokazBlad('Wszystkie pola są wymagane');
         return;
     }
-    
+
     let gramatury = gramaturyStr.split(',').map(g => parseInt(g.trim())).filter(g => !isNaN(g));
     let ceny = cenyStr.split(',').map(c => parseFloat(c.trim())).filter(c => !isNaN(c));
-    
+
     if (gramatury.length === 0 || ceny.length === 0) {
         pokazBlad('Nieprawidłowy format gramatur lub cen');
         return;
     }
-    
+
     if (gramatury.length !== ceny.length) {
         pokazBlad('Liczba gramatur musi być równa liczbie cen');
         return;
     }
-    
-    let operacja = staraNazwa ? 'edytuj' : 'dodaj';
-    let dane = {
+
+    const zapiszPapierZKategoria = (docelowaKategoria) => {
+        let operacja = staraNazwa ? 'edytuj' : 'dodaj';
+        let dane = {
+            nazwa: nazwa,
+            kategoria: docelowaKategoria,
+            gramatury: gramatury,
+            ceny: ceny
+        };
+
+        if (staraNazwa) {
+            dane.stara_nazwa = staraNazwa;
+            if (staraNazwa !== nazwa) {
+                dane.nowa_nazwa = nazwa;
+            }
+        }
+
+        wykonajOperacje('papiery', operacja, dane, () => {
+            modal.hide();
+            zaladujSlowniki();
+            pokazSukces(`Papier "${nazwa}" ${staraNazwa ? 'zaktualizowany' : 'dodany'}`);
+        });
+    };
+
+    if (kategoria === '__nowa__') {
+        if (!nowaKategoriaNazwa) {
+            pokazBlad('Podaj nazwę nowej kategorii');
+            return;
+        }
+
+        wykonajOperacje('kategorie_papieru', 'dodaj', {
+            nazwa: nowaKategoriaNazwa,
+            opis: nowaKategoriaOpis
+        }, (response) => {
+            const nowaKategoriaId = response && response.data && response.data.nazwa ? response.data.nazwa : nowaKategoriaNazwa;
+            zapiszPapierZKategoria(nowaKategoriaId);
+        });
+        return;
+    }
+
+    zapiszPapierZKategoria(kategoria);
+}
+
+// ==================== KATEGORIE PAPIERU ====================
+
+function renderujKategoriePapieru() {
+    const kategorie = Object.entries(slowniki.kategorie_papieru || {});
+    const papiery = Object.values(slowniki.papiery || {});
+
+    const licznikPapierow = {};
+    papiery.forEach(p => {
+        const kat = p.kategoria;
+        if (!kat) return;
+        licznikPapierow[kat] = (licznikPapierow[kat] || 0) + 1;
+    });
+
+    const rows = kategorie
+        .sort((a, b) => {
+            const nazwaA = (a[1]?.nazwa || a[0] || '').toString().toLowerCase();
+            const nazwaB = (b[1]?.nazwa || b[0] || '').toString().toLowerCase();
+            if (nazwaA < nazwaB) return -1;
+            if (nazwaA > nazwaB) return 1;
+            return 0;
+        })
+        .map(([id, dane]) => {
+            const nazwa = dane?.nazwa || id;
+            const opis = dane?.opis ? dane.opis : '<span class="text-muted">Brak opisu</span>';
+            const liczba = licznikPapierow[id] || 0;
+            const disabled = liczba > 0 ? 'disabled' : '';
+            const disableTitle = liczba > 0 ? 'Kategoria przypisana do papierów – usuń lub przenieś papiery przed usunięciem kategorii' : '';
+            const disableTitleAttr = disableTitle ? disableTitle.replace(/"/g, '&quot;') : '';
+
+            return `
+                <tr>
+                    <td>${nazwa}</td>
+                    <td>${opis}</td>
+                    <td class="text-center">${liczba}</td>
+                    <td class="text-end">
+                        <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
+                            <button type="button" class="btn btn-sm btn-warning" onclick='edytujKategoriePapieru(${JSON.stringify(id)})'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" ${disabled} title="${disableTitleAttr}" onclick='usunKategoriePapieru(${JSON.stringify(id)})'>
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    const tabela = rows ? rows : '<tr><td colspan="4" class="text-center text-muted">Brak kategorii papieru</td></tr>';
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Nazwa kategorii</th>
+                        <th>Opis</th>
+                        <th class="text-center">Liczba papierów</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tabela}
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted small mt-2"><i class="fas fa-info-circle"></i> Kategorie są używane do grupowania papierów w aplikacji i w interfejsie kalkulatora.</p>
+    `;
+
+    $('#listaKategoriiPapieru').html(html);
+}
+
+function pokazFormularzKategorii(nazwa = null) {
+    const dane = nazwa ? (slowniki.kategorie_papieru || {})[nazwa] : null;
+
+    const html = `
+        <div class="mb-3">
+            <label class="form-label">Nazwa kategorii</label>
+            <input type="text" class="form-control" id="form_kategoria_nazwa" value="${dane ? dane.nazwa : (nazwa || '')}">
+            <small class="text-muted">Nazwa jest widoczna w listach wyboru papierów.</small>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Opis kategorii (opcjonalnie)</label>
+            <textarea class="form-control" id="form_kategoria_opis" rows="3">${dane ? (dane.opis || '') : ''}</textarea>
+        </div>
+    `;
+
+    $('#formularzTytul').text(nazwa ? `Edytuj kategorię: ${dane?.nazwa || nazwa}` : 'Dodaj nową kategorię papieru');
+    $('#formularzTresc').html(html);
+
+    $('#zapiszFormularz').off('click').on('click', () => zapiszKategoriePapieru(nazwa));
+    modal.show();
+}
+
+function zapiszKategoriePapieru(staraNazwa) {
+    const nazwa = $('#form_kategoria_nazwa').val().trim();
+    const opis = $('#form_kategoria_opis').val().trim();
+
+    if (!nazwa) {
+        pokazBlad('Nazwa kategorii jest wymagana');
+        return;
+    }
+
+    const operacja = staraNazwa ? 'edytuj' : 'dodaj';
+    const dane = {
         nazwa: nazwa,
-        kategoria: kategoria,
-        gramatury: gramatury,
-        ceny: ceny
+        opis: opis
     };
 
     if (staraNazwa) {
@@ -444,11 +657,35 @@ function zapiszPapier(staraNazwa) {
             dane.nowa_nazwa = nazwa;
         }
     }
-    
-    wykonajOperacje('papiery', operacja, dane, () => {
+
+    wykonajOperacje('kategorie_papieru', operacja, dane, (response) => {
+        const nazwaFinalna = response && response.data && response.data.nazwa ? response.data.nazwa : nazwa;
         modal.hide();
         zaladujSlowniki();
-        pokazSukces(`Papier "${nazwa}" ${staraNazwa ? 'zaktualizowany' : 'dodany'}`);
+        pokazSukces(`Kategoria "${nazwaFinalna}" ${staraNazwa ? 'zaktualizowana' : 'dodana'}`);
+    });
+}
+
+function edytujKategoriePapieru(nazwa) {
+    pokazFormularzKategorii(nazwa);
+}
+
+function usunKategoriePapieru(nazwa) {
+    const papiery = Object.values(slowniki.papiery || {});
+    const powiazane = papiery.filter(p => p.kategoria === nazwa).length;
+
+    if (powiazane > 0) {
+        pokazBlad('Nie można usunąć kategorii przypisanej do papierów. Najpierw przenieś papiery do innej kategorii.');
+        return;
+    }
+
+    if (!confirm(`Czy na pewno usunąć kategorię: ${nazwa}?`)) {
+        return;
+    }
+
+    wykonajOperacje('kategorie_papieru', 'usun', { nazwa: nazwa }, () => {
+        zaladujSlowniki();
+        pokazSukces(`Kategoria "${nazwa}" usunięta`);
     });
 }
 

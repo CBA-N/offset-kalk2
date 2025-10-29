@@ -18,9 +18,14 @@ class SlownikiManager:
             plik_json: Ścieżka do pliku JSON z danymi
         """
         self.plik_json = plik_json
+        self._migracje_wymagaja_zapisu = False
         self.slowniki = self._zaladuj_slowniki()
         self._mapuj_jednostki_na_kody()
         self.historia_zmian = []
+
+        # Zapisz zmiany migracyjne (np. dodanie nowych słowników)
+        if self._migracje_wymagaja_zapisu:
+            self.zapisz_slowniki()
         
     def _zaladuj_slowniki(self) -> Dict:
         """Załaduj słowniki z pliku lub utwórz domyślne"""
@@ -288,12 +293,14 @@ class SlownikiManager:
         return None
     
     # ==================== PAPIERY ====================
-    
+
     def dodaj_papier(self, nazwa: str, gramatury: List[int], ceny: List[float],
                      kategoria: str = 'niepowlekany') -> Dict:
         """Dodaj nowy rodzaj papieru"""
         if nazwa in self.slowniki['papiery']:
             raise ValueError(f"Papier '{nazwa}' już istnieje")
+
+        self._waliduj_kategorie_papieru(kategoria)
         
         if len(gramatury) != len(ceny):
             raise ValueError("Liczba gramatur musi być równa liczbie cen")
@@ -342,15 +349,16 @@ class SlownikiManager:
                 raise ValueError("Musisz podać ceny dla nowych gramatur")
             if len(gramatury) != len(ceny):
                 raise ValueError("Liczba gramatur musi być równa liczbie cen")
-            
+
             gramatury_sorted = sorted(gramatury)
             ceny_dict = {str(gram): cena for gram, cena in zip(gramatury_sorted, ceny)}
-            
+
             papier['gramatury'] = gramatury_sorted
             papier['ceny'] = ceny_dict
-        
+
         # Aktualizuj kategorię
         if kategoria is not None:
+            self._waliduj_kategorie_papieru(kategoria)
             papier['kategoria'] = kategoria
         
         self._zapisz_zmiane('papiery', 'edycja', stara_nazwa)
