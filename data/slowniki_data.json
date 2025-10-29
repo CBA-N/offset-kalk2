@@ -290,7 +290,7 @@
       "ceny": {
         "90": 8.7771
       },
-      "kategoria": "samoprzylepny"
+      "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (BLUE LEBEL)": {
       "gramatury": [
@@ -301,7 +301,7 @@
         "80": 12.6038,
         "90": 12.24465
       },
-      "kategoria": "samoprzylepny"
+      "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (CHROMOLUX)": {
       "gramatury": [
@@ -312,7 +312,7 @@
         "80": 18.7151125,
         "100": 25.7353
       },
-      "kategoria": "samoprzylepny"
+      "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (NEVIA)": {
       "gramatury": [
@@ -321,7 +321,7 @@
       "ceny": {
         "80": 6.0151
       },
-      "kategoria": "samoprzylepny"
+      "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (PARADE LABEL PRO)": {
       "gramatury": [
@@ -330,7 +330,7 @@
       "ceny": {
         "80": 6.5024999999999995
       },
-      "kategoria": "samoprzylepny"
+      "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (PREMIUM PŁÓTNO)": {
       "gramatury": [
@@ -339,7 +339,7 @@
       "ceny": {
         "75": 6.85975
       },
-      "kategoria": "samoprzylepny"
+      "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (PREMIUM)": {
       "gramatury": [
@@ -352,7 +352,7 @@
         "80": 6.1726,
         "100": 6.1714
       },
-      "kategoria": "samoprzylepny"
+      "kategoria": "etykietowy"
     },
     "Kartony - Karton biały spód (ALFA ZET)": {
       "gramatury": [
@@ -750,7 +750,7 @@
       "ceny": {
         "285": 40.1003
       },
-      "kategoria": "samoprzylepny"
+      "kategoria": "etykietowy"
     },
     "Niepowlekany - EKO niepowl.": {
       "gramatury": [
@@ -2128,6 +2128,64 @@
         "kilogram"
       ],
       "zrodlo_bazowej_ilosci": "waga"
+    }
+  },
+  "kategorie_papieru": {
+    "etykietowy": {
+      "nazwa": "Papier etykietowy",
+      "opis": "Materiały do druku etykiet, w tym warianty specjalistyczne"
+    },
+    "powlekany": {
+      "nazwa": "Powlekany",
+      "opis": ""
+    },
+    "niepowlekany": {
+      "nazwa": "Niepowlekany",
+      "opis": ""
+    },
+    "karton": {
+      "nazwa": "Karton",
+      "opis": ""
+    },
+    "specjalny": {
+      "nazwa": "Specjalny",
+      "opis": "Materiały niestandardowe i specjalistyczne"
+    },
+    "ekologiczny": {
+      "nazwa": "Ekologiczny",
+      "opis": ""
+    },
+    "digital": {
+      "nazwa": "Digital",
+      "opis": ""
+    },
+    "koperty": {
+      "nazwa": "Koperty",
+      "opis": ""
+    },
+    "ozdobny": {
+      "nazwa": "Ozdobny",
+      "opis": ""
+    },
+    "pakowy": {
+      "nazwa": "Pakowy",
+      "opis": ""
+    },
+    "samokopia": {
+      "nazwa": "Samokopia",
+      "opis": ""
+    },
+    "samoprzylepny": {
+      "nazwa": "Samoprzylepny",
+      "opis": ""
+    },
+    "syntetyczny": {
+      "nazwa": "Syntetyczny",
+      "opis": ""
+    },
+    "wizytówkowy": {
+      "nazwa": "Wizytówkowy",
+      "opis": ""
     }
   }
 }

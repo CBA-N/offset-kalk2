@@ -294,7 +294,7 @@ PAPIERY = {
         "ceny": {
             "90": 8.7771
         },
-        "kategoria": "samoprzylepny"
+        "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (BLUE LEBEL)": {
         "gramatury": [
@@ -305,7 +305,7 @@ PAPIERY = {
             "80": 12.6038,
             "90": 12.24465
         },
-        "kategoria": "samoprzylepny"
+        "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (CHROMOLUX)": {
         "gramatury": [
@@ -316,7 +316,7 @@ PAPIERY = {
             "80": 18.7151125,
             "100": 25.7353
         },
-        "kategoria": "samoprzylepny"
+        "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (NEVIA)": {
         "gramatury": [
@@ -325,7 +325,7 @@ PAPIERY = {
         "ceny": {
             "80": 6.0151
         },
-        "kategoria": "samoprzylepny"
+        "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (PARADE LABEL PRO)": {
         "gramatury": [
@@ -334,7 +334,7 @@ PAPIERY = {
         "ceny": {
             "80": 6.5024999999999995
         },
-        "kategoria": "samoprzylepny"
+        "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (PREMIUM PŁÓTNO)": {
         "gramatury": [
@@ -343,7 +343,7 @@ PAPIERY = {
         "ceny": {
             "75": 6.85975
         },
-        "kategoria": "samoprzylepny"
+        "kategoria": "etykietowy"
     },
     "Etykietowy - Etykietowy (PREMIUM)": {
         "gramatury": [
@@ -356,7 +356,7 @@ PAPIERY = {
             "80": 6.1726,
             "100": 6.1714
         },
-        "kategoria": "samoprzylepny"
+        "kategoria": "etykietowy"
     },
     "Kartony - Karton biały spód (ALFA ZET)": {
         "gramatury": [
@@ -754,7 +754,7 @@ PAPIERY = {
         "ceny": {
             "285": 40.1003
         },
-        "kategoria": "samoprzylepny"
+        "kategoria": "etykietowy"
     },
     "Niepowlekany - EKO niepowl.": {
         "gramatury": [
@@ -1691,7 +1691,11 @@ KATEGORIE_PAPIERU = {
     },
     "specjalny": {
         "nazwa": "Specjalny",
-        "opis": "Materiały samoklejące i niestandardowe"
+        "opis": "Materiały niestandardowe i specjalistyczne"
+    },
+    "etykietowy": {
+        "nazwa": "Papier etykietowy",
+        "opis": "Materiały do druku etykiet, w tym warianty specjalistyczne"
     },
     "ekologiczny": {
         "nazwa": "Ekologiczny",
