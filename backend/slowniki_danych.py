@@ -1866,6 +1866,65 @@ KOLORY_SPECJALNE = {
     }
 }
 
+KOLORYSTYKI_DRUKU = {
+    "4+0": {
+        "etykieta": "4+0 (CMYK jednostronnie)",
+        "kolory_przod": 4,
+        "kolory_tyl": 0,
+        "mnoznik_przelotow": 1.0,
+        "domyslna_ilosc_form": 1,
+        "opis": "Druk w pełnym kolorze CMYK na jednej stronie"
+    },
+    "4+1": {
+        "etykieta": "4+1 (CMYK + 1 kolor na odwrocie)",
+        "kolory_przod": 4,
+        "kolory_tyl": 1,
+        "mnoznik_przelotow": 1.25,
+        "domyslna_ilosc_form": 2,
+        "opis": "Druk CMYK na awersie oraz dodatkowy kolor na rewersie"
+    },
+    "4+4": {
+        "etykieta": "4+4 (CMYK dwustronnie)",
+        "kolory_przod": 4,
+        "kolory_tyl": 4,
+        "mnoznik_przelotow": 2.0,
+        "domyslna_ilosc_form": 2,
+        "opis": "Pełnokolorowy druk CMYK po obu stronach"
+    },
+    "2+0": {
+        "etykieta": "2+0 (dwukolorowy jednostronny)",
+        "kolory_przod": 2,
+        "kolory_tyl": 0,
+        "mnoznik_przelotow": 1.0,
+        "domyslna_ilosc_form": 1,
+        "opis": "Druk dwukolorowy na jednej stronie"
+    },
+    "2+2": {
+        "etykieta": "2+2 (dwukolorowy dwustronny)",
+        "kolory_przod": 2,
+        "kolory_tyl": 2,
+        "mnoznik_przelotow": 2.0,
+        "domyslna_ilosc_form": 2,
+        "opis": "Dwukolorowy druk na obu stronach arkusza"
+    },
+    "1+0": {
+        "etykieta": "1+0 (jednokolorowy jednostronny)",
+        "kolory_przod": 1,
+        "kolory_tyl": 0,
+        "mnoznik_przelotow": 1.0,
+        "domyslna_ilosc_form": 1,
+        "opis": "Druk jednym kolorem na awersie"
+    },
+    "1+1": {
+        "etykieta": "1+1 (jednokolorowy dwustronny)",
+        "kolory_przod": 1,
+        "kolory_tyl": 1,
+        "mnoznik_przelotow": 2.0,
+        "domyslna_ilosc_form": 2,
+        "opis": "Jednokolorowy druk po obu stronach"
+    }
+}
+
 PAKOWANIE = {
     "Folia stretch (standard)": {
         "opis": "Owinięcie folią stretch",

@@ -91,6 +91,7 @@ class KalkulatorDruku:
             self.uszlachetnienia = slowniki_json.get("uszlachetnienia", USZLACHETNIENIA)
             self.obrobka = slowniki_json.get("obrobka", OBROBKA_WYKONCZ)
             self.kolory_spec = slowniki_json.get("kolory_specjalne", KOLORY_SPECJALNE)
+            self.kolorystyki = slowniki_json.get("kolorystyki", KOLORYSTYKI_DRUKU)
             self.pakowanie = slowniki_json.get("pakowanie", PAKOWANIE)
             self.transport = slowniki_json.get("transport", TRANSPORT)
             self.priorytety = slowniki_json.get("priorytety_optymalizacji", PRIORYTETY_OPTYMALIZACJI)
@@ -101,6 +102,7 @@ class KalkulatorDruku:
             self.uszlachetnienia = USZLACHETNIENIA
             self.obrobka = OBROBKA_WYKONCZ
             self.kolory_spec = KOLORY_SPECJALNE
+            self.kolorystyki = KOLORYSTYKI_DRUKU
             self.pakowanie = PAKOWANIE
             self.transport = TRANSPORT
             self.priorytety = PRIORYTETY_OPTYMALIZACJI
@@ -271,15 +273,45 @@ class KalkulatorDruku:
         koszt_form = ilosc_form * self.stawki['koszt_formy_drukowej']
 
         # Przeloty
-        if kolorystyka == '4+0':
-            przeloty = ilosc_arkuszy  # Jednostronny
-        elif kolorystyka == '4+4':
-            przeloty = ilosc_arkuszy * 2  # Dwustronny
-        elif kolorystyka == '4+1':
-            przeloty = ilosc_arkuszy * 1.25  # 4 kolory + 1 kolor
-        else:
-            przeloty = ilosc_arkuszy
-        
+        przeloty = None
+        definicja_kolorystyki = self.kolorystyki.get(kolorystyka) if hasattr(self, 'kolorystyki') else None
+        if definicja_kolorystyki:
+            mnoznik = definicja_kolorystyki.get('mnoznik_przelotow')
+            try:
+                mnoznik = float(mnoznik) if mnoznik is not None else None
+            except (TypeError, ValueError):
+                mnoznik = None
+
+            if mnoznik and mnoznik > 0:
+                przeloty = ilosc_arkuszy * mnoznik
+            else:
+                liczba_przelotow = 0
+                try:
+                    if int(definicja_kolorystyki.get('kolory_przod', 0)) > 0:
+                        liczba_przelotow += 1
+                except (TypeError, ValueError):
+                    pass
+                try:
+                    if int(definicja_kolorystyki.get('kolory_tyl', 0)) > 0:
+                        liczba_przelotow += 1
+                except (TypeError, ValueError):
+                    pass
+
+                if liczba_przelotow <= 0:
+                    liczba_przelotow = 1
+
+                przeloty = ilosc_arkuszy * liczba_przelotow
+
+        if przeloty is None:
+            if kolorystyka == '4+0':
+                przeloty = ilosc_arkuszy  # Jednostronny
+            elif kolorystyka == '4+4':
+                przeloty = ilosc_arkuszy * 2  # Dwustronny
+            elif kolorystyka == '4+1':
+                przeloty = ilosc_arkuszy * 1.25  # 4 kolory + 1 kolor
+            else:
+                przeloty = ilosc_arkuszy
+
         koszt_przelotow = (przeloty / 1000) * self.stawki['stawka_nakladu_1000_arkuszy']
 
         stawka_druku_h = self.stawki.get('roboczogodzina_druku', stawka_przygotowania)

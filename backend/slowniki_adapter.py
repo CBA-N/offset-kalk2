@@ -124,7 +124,10 @@ def adapter_nowy_do_starego(slowniki_nowe: dict) -> dict:
                 'opis': dane.get('opis', '')
             }
     slowniki_stare['kolory_specjalne'] = kolory_stare
-    
+
+    # KOLORYSTYKI DRUKU: kopiuj wprost (zawierają metadane do UI)
+    slowniki_stare['kolorystyki'] = slowniki_nowe.get('kolorystyki', {})
+
     # PAKOWANIE: cena_pln → cena
     pakowanie_stare = {}
     for nazwa, dane in slowniki_nowe.get('pakowanie', {}).items():
@@ -171,6 +174,7 @@ def wstrzyknij_slowniki_do_kalkulatora(kalkulator, slowniki_mgr):
     kalkulator.stawki = slowniki_stare['stawki']
     kalkulator.priorytety = slowniki_stare['priorytety']
     kalkulator.marza = slowniki_stare.get('marza', {})
+    kalkulator.kolorystyki = slowniki_nowe.get('kolorystyki', {})
     kalkulator.jednostki = slowniki_nowe.get('jednostki', {})
     kalkulator.ciecie_papieru = slowniki_nowe.get('ciecie_papieru', {})  # Nowe: konfiguracja cięcia
     
