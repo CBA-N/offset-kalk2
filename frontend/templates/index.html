@@ -278,9 +278,12 @@
         </div>
 
         <!-- Przycisk kalkulacji -->
-        <div class="text-center">
+        <div class="d-flex justify-content-center flex-wrap gap-2">
             <button type="submit" class="btn btn-primary btn-lg">
                 <i class="fas fa-calculator"></i> Oblicz Cenę
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-lg" id="clearOfferBtn">
+                <i class="fas fa-eraser"></i> Wyczyść ofertę
             </button>
         </div>
     </form>
@@ -303,9 +306,17 @@
 const kolorystykiSlownik = {{ kolorystyki | tojson }};
 
 $(document).ready(function() {
+    const FORM_CACHE_KEY = 'kalkulatorFormCache';
+    const PAPER_CACHE_KEY = 'kalkulatorPapierCache';
+    const PAPER_CACHE_TTL_MS = 1000 * 60 * 60; // 1 godzina
+
     let odwracankaBazowaLiczbaForm = null;
     let programmaticFormChange = false;
     let blokujAutoCache = false;
+    let papieryData = {};
+    let gramaturyCache = {};
+    let aktualneKategorie = [];
+    let papieryPromise = null;
 
     function pobierzDomyslnaIloscForm(definicja) {
         if (!definicja) return 1;
@@ -442,6 +453,25 @@ $(document).ready(function() {
 
     aktualizujKolorystykeUI(true);
 
+    const defaultFormState = {
+        nazwa_produktu: $('[name="nazwa_produktu"]').val(),
+        naklad: $('[name="naklad"]').val(),
+        format_szerokosc: $('[name="format_szerokosc"]').val(),
+        format_wysokosc: $('[name="format_wysokosc"]').val(),
+        rodzaj_pracy: $('#rodzajPracy').val() || '',
+        kategoria_papieru: $('#kategoriaPapieru').val() || '',
+        rodzaj_papieru: $('#rodzajPapieru').val() || '',
+        gramatura: $('#gramatura').val() || '',
+        kolorystyka: $('#kolorystyka').val(),
+        ilosc_form: $('#iloscForm').val(),
+        pakowanie: $('[name="pakowanie"]').val(),
+        transport: $('[name="transport"]').val(),
+        marza_procent: $('[name="marza_procent"]').val(),
+        priorytet_optymalizacji: $('[name="priorytet_optymalizacji"]').val(),
+        wymaga_ciecia_papieru: $('#wymagaCiecia').is(':checked'),
+        kontrahent_id: $('#kontrahent_id').val() || ''
+    };
+
     // === ŁADOWANIE KONTRAHENTÓW ===
     function zaladujKontrahentow() {
         $.get('/api/kontrahenci', function(response) {
@@ -510,38 +540,31 @@ $(document).ready(function() {
         if (urlParams.has('rodzaj_papieru')) {
             const rodzajPapieru = urlParams.get('rodzaj_papieru');
             const gramaturaValue = urlParams.get('gramatura');
-            
-            // Poczekaj aż załadują się kategorie, potem znajdź odpowiednią kategorię
-            setTimeout(() => {
-                $.get('/api/papiery-kategorie', function(data) {
-                    // Znajdź kategorię dla tego papieru
-                    let znalezionaKategoria = null;
-                    for (let kat in data.papiery) {
-                        const papiery = data.papiery[kat];
-                        if (papiery.some(p => p.nazwa === rodzajPapieru)) {
-                            znalezionaKategoria = kat;
-                            break;
-                        }
+
+            papieryPromise.then(() => {
+                let znalezionaKategoria = null;
+
+                Object.keys(papieryData || {}).some(function(kat) {
+                    const lista = papieryData[kat] || [];
+                    const znaleziono = lista.some(p => p.nazwa === rodzajPapieru);
+                    if (znaleziono) {
+                        znalezionaKategoria = kat;
+                        return true;
                     }
-                    
-                    if (znalezionaKategoria) {
-                        // Ustaw kategorię
-                        $('#kategoriaPapieru').val(znalezionaKategoria).trigger('change');
-                        
-                        // Poczekaj na załadowanie papierów, potem ustaw papier
-                        setTimeout(() => {
-                            $('#rodzajPapieru').val(rodzajPapieru).trigger('change');
-                            
-                            // Poczekaj na załadowanie gramatur, potem ustaw gramaturę
-                            if (gramaturaValue) {
-                                setTimeout(() => {
-                                    $('#gramatura').val(gramaturaValue);
-                                }, 300);
-                            }
-                        }, 300);
-                    }
+                    return false;
                 });
-            }, 500);
+
+                if (!znalezionaKategoria) {
+                    return;
+                }
+
+                $('#kategoriaPapieru').val(znalezionaKategoria);
+                const ustawionoPapier = wypelnijRodzajePapieru(znalezionaKategoria, rodzajPapieru);
+
+                if (ustawionoPapier) {
+                    pobierzGramatury(rodzajPapieru, gramaturaValue);
+                }
+            });
         }
 
         if (urlParams.has('kolorystyka')) {
@@ -646,70 +669,197 @@ $(document).ready(function() {
     });
     
     // === KASKADOWY WYBÓR PAPIERÓW (3 KROKI) ===
-    let papieryData = null;
-    
-    // 1. Załaduj kategorie papierów
-    function zaladujKategoriePapierow() {
-        $.get('/api/papiery-kategorie', function(data) {
-            papieryData = data.papiery;
-            const $kategoria = $('#kategoriaPapieru');
-            $kategoria.html('<option value="">-- Wybierz kategorię --</option>');
-            
-            data.kategorie.forEach(function(kat) {
-                $kategoria.append(`<option value="${kat}">${kat}</option>`);
-            });
-        }).fail(function() {
-            console.error('Błąd ładowania kategorii papierów');
-        });
+    function resetRodzajPapieruSelect() {
+        $('#rodzajPapieru')
+            .html('<option value="">-- Najpierw wybierz kategorię --</option>')
+            .prop('disabled', true);
     }
-    
-    zaladujKategoriePapierow();
-    
-    // 2. Po wyborze kategorii - załaduj papiery z tej kategorii
-    $('#kategoriaPapieru').change(function() {
-        const kategoria = $(this).val();
-        const $rodzaj = $('#rodzajPapieru');
+
+    function resetGramaturaSelect() {
+        $('#gramatura')
+            .html('<option value="">-- Wybierz papier --</option>')
+            .prop('disabled', true);
+    }
+
+    function ustawGramaturaOptions(dataset, selected = null) {
         const $gramatura = $('#gramatura');
-        
-        // Reset pól
-        $rodzaj.html('<option value="">-- Najpierw wybierz kategorię --</option>').prop('disabled', true);
-        $gramatura.html('<option value="">-- Wybierz papier --</option>').prop('disabled', true);
-        
-        if (!kategoria || !papieryData || !papieryData[kategoria]) {
+        const gramatury = Array.isArray(dataset?.gramatury) ? dataset.gramatury : [];
+        const ceny = dataset?.ceny || {};
+
+        if (!gramatury.length) {
+            resetGramaturaSelect();
             return;
         }
-        
-        // Wypełnij listę papierów z wybranej kategorii
+
+        const selectedStr = selected !== null && selected !== undefined ? String(selected) : null;
+        $gramatura.html('');
+        gramatury.forEach(function(g) {
+            const key = String(g);
+            const cena = ceny[key] !== undefined ? Number(ceny[key]).toFixed(2) : '0.00';
+            $gramatura.append(`<option value="${key}">${g} g/m² (${cena} PLN/kg)</option>`);
+        });
+        $gramatura.prop('disabled', false);
+
+        if (selectedStr && gramatury.map(String).includes(selectedStr)) {
+            $gramatura.val(selectedStr);
+        }
+    }
+
+    function zapiszPapierCache(dataset = null) {
+        try {
+            const payload = {
+                timestamp: Date.now(),
+                kategorie: dataset?.kategorie || aktualneKategorie || [],
+                papiery: dataset?.papiery || papieryData || {},
+                gramatury: dataset?.gramatury || gramaturyCache || {}
+            };
+            localStorage.setItem(PAPER_CACHE_KEY, JSON.stringify(payload));
+        } catch (e) {
+            console.warn('Nie udało się zapisać cache papierów:', e);
+        }
+    }
+
+    function odczytajPapierCache() {
+        try {
+            const raw = localStorage.getItem(PAPER_CACHE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (parsed.timestamp && Date.now() - parsed.timestamp > PAPER_CACHE_TTL_MS) {
+                localStorage.removeItem(PAPER_CACHE_KEY);
+                return null;
+            }
+            return parsed;
+        } catch (e) {
+            console.warn('Nie udało się odczytać cache papierów:', e);
+            return null;
+        }
+    }
+
+    function wypelnijKategorieSelect(kategorie) {
+        const $kategoria = $('#kategoriaPapieru');
+        const poprzedniaKategoria = $kategoria.val();
+        const poprzedniRodzaj = $('#rodzajPapieru').val();
+        const poprzedniaGramatura = $('#gramatura').val();
+
+        aktualneKategorie = Array.isArray(kategorie) ? [...kategorie] : [];
+
+        $kategoria.html('<option value="">-- Wybierz kategorię --</option>');
+        aktualneKategorie.forEach(function(kat) {
+            $kategoria.append(`<option value="${kat}">${kat}</option>`);
+        });
+
+        if (poprzedniaKategoria && aktualneKategorie.includes(poprzedniaKategoria)) {
+            $kategoria.val(poprzedniaKategoria);
+            const zachowano = wypelnijRodzajePapieru(poprzedniaKategoria, poprzedniRodzaj);
+            if (zachowano && poprzedniRodzaj) {
+                pobierzGramatury(poprzedniRodzaj, poprzedniaGramatura);
+            }
+        } else {
+            $kategoria.val('');
+            resetRodzajPapieruSelect();
+            resetGramaturaSelect();
+        }
+    }
+
+    function wypelnijRodzajePapieru(kategoria, wybrany = null) {
+        resetRodzajPapieruSelect();
+        resetGramaturaSelect();
+
+        if (!kategoria || !papieryData || !papieryData[kategoria]) {
+            return false;
+        }
+
+        const $rodzaj = $('#rodzajPapieru');
+        const lista = papieryData[kategoria];
         $rodzaj.html('<option value="">-- Wybierz papier --</option>');
-        papieryData[kategoria].forEach(function(papier) {
+        lista.forEach(function(papier) {
             $rodzaj.append(`<option value="${papier.nazwa}">${papier.nazwa}</option>`);
         });
         $rodzaj.prop('disabled', false);
+
+        if (wybrany && lista.some(p => p.nazwa === wybrany)) {
+            $rodzaj.val(wybrany);
+            return true;
+        }
+
+        return false;
+    }
+
+    function pobierzGramatury(rodzaj, selected = null) {
+        if (!rodzaj) {
+            resetGramaturaSelect();
+            return Promise.resolve();
+        }
+
+        if (gramaturyCache[rodzaj]) {
+            ustawGramaturaOptions(gramaturyCache[rodzaj], selected);
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            $.get('/api/gramatury/' + encodeURIComponent(rodzaj), function(data) {
+                gramaturyCache[rodzaj] = data;
+                ustawGramaturaOptions(data, selected);
+                zapiszPapierCache();
+                resolve();
+            }).fail(function() {
+                console.error('Błąd ładowania gramatur');
+                resolve();
+            });
+        });
+    }
+
+    function zaladujKategoriePapierow() {
+        const cached = odczytajPapierCache();
+
+        if (cached) {
+            aktualneKategorie = Array.isArray(cached.kategorie) ? cached.kategorie : [];
+            papieryData = cached.papiery || {};
+            gramaturyCache = cached.gramatury || {};
+            if (aktualneKategorie.length) {
+                wypelnijKategorieSelect(aktualneKategorie);
+            } else {
+                resetRodzajPapieruSelect();
+                resetGramaturaSelect();
+            }
+        }
+
+        return new Promise((resolve) => {
+            $.get('/api/papiery-kategorie', function(data) {
+                papieryData = data.papiery || {};
+                aktualneKategorie = data.kategorie || [];
+                wypelnijKategorieSelect(aktualneKategorie);
+                zapiszPapierCache({
+                    kategorie: aktualneKategorie,
+                    papiery: papieryData,
+                    gramatury: gramaturyCache
+                });
+                if (!cached) {
+                    resolve();
+                }
+            }).fail(function() {
+                console.error('Błąd ładowania kategorii papierów');
+                if (!cached) {
+                    resolve();
+                }
+            });
+
+            if (cached) {
+                resolve();
+            }
+        });
+    }
+
+    papieryPromise = zaladujKategoriePapierow();
+
+    $('#kategoriaPapieru').change(function() {
+        const kategoria = $(this).val();
+        wypelnijRodzajePapieru(kategoria);
     });
-    
-    // 3. Po wyborze papieru - załaduj gramatury
+
     $('#rodzajPapieru').change(function() {
         const rodzaj = $(this).val();
-        const $gramatura = $('#gramatura');
-        
-        // Reset pola gramatur
-        $gramatura.html('<option value="">-- Wybierz papier --</option>').prop('disabled', true);
-        
-        if (!rodzaj) {
-            return;
-        }
-        
-        // Pobierz gramatury dla wybranego papieru
-        $.get('/api/gramatury/' + encodeURIComponent(rodzaj), function(data) {
-            $gramatura.html('');
-            data.gramatury.forEach(function(g) {
-                const cena = data.ceny[g] ? data.ceny[g].toFixed(2) : '0.00';
-                $gramatura.append(`<option value="${g}">${g} g/m² (${cena} PLN/kg)</option>`);
-            });
-            $gramatura.prop('disabled', false);
-        }).fail(function() {
-            console.error('Błąd ładowania gramatur');
-        });
+        pobierzGramatury(rodzaj);
     });
     
     // Obsługa formularza
@@ -780,7 +930,7 @@ $(document).ready(function() {
     
     function wyswietlWynik(wynik) {
         const format = wynik.wybrany_format;
-        
+
         let html = `
             <h3 class="text-center mb-4"><i class="fas fa-check-circle text-success"></i> Oferta Wyceny</h3>
             
@@ -928,18 +1078,80 @@ $(document).ready(function() {
             scrollTop: $('#wyniki').offset().top - 100
         }, 500);
     }
-    
+
+    function wyczyscOferte() {
+        blokujAutoCache = true;
+        try {
+            $('input[name="nazwa_produktu"]').val(defaultFormState.nazwa_produktu);
+            $('input[name="naklad"]').val(defaultFormState.naklad);
+            $('input[name="format_szerokosc"]').val(defaultFormState.format_szerokosc);
+            $('input[name="format_wysokosc"]').val(defaultFormState.format_wysokosc);
+            $('#rodzajPracy').val(defaultFormState.rodzaj_pracy || '');
+
+            if (defaultFormState.kategoria_papieru && papieryData[defaultFormState.kategoria_papieru]) {
+                $('#kategoriaPapieru').val(defaultFormState.kategoria_papieru);
+                const ustawiono = wypelnijRodzajePapieru(
+                    defaultFormState.kategoria_papieru,
+                    defaultFormState.rodzaj_papieru || ''
+                );
+                $('#rodzajPapieru').val(defaultFormState.rodzaj_papieru || '');
+                if (ustawiono && defaultFormState.rodzaj_papieru) {
+                    pobierzGramatury(defaultFormState.rodzaj_papieru, defaultFormState.gramatura || null);
+                } else {
+                    resetGramaturaSelect();
+                }
+            } else {
+                $('#kategoriaPapieru').val('');
+                resetRodzajPapieruSelect();
+                resetGramaturaSelect();
+            }
+
+            $('#kolorystyka').val(defaultFormState.kolorystyka);
+            aktualizujKolorystykeUI(true);
+            ustawIloscForm(defaultFormState.ilosc_form || 4, false);
+
+            $('input[name="kolory_specjalne"]').prop('checked', false);
+            $('input[name="uszlachetnienia"]').prop('checked', false);
+            $('input[name="obrobka"]').prop('checked', false);
+
+            $('[name="pakowanie"]').val(defaultFormState.pakowanie);
+            $('[name="transport"]').val(defaultFormState.transport);
+            $('[name="marza_procent"]').val(defaultFormState.marza_procent);
+            $('[name="priorytet_optymalizacji"]').val(defaultFormState.priorytet_optymalizacji);
+
+            $('#wymagaCiecia').prop('checked', defaultFormState.wymaga_ciecia_papieru);
+            $('#odwracankaCheckbox').prop('checked', false);
+            odwracankaBazowaLiczbaForm = null;
+            aktualizujOdwracankaVisibility();
+
+            $('#kontrahent_id').val(defaultFormState.kontrahent_id || '');
+            $('#kontrahentPodglad').hide();
+
+            $('#wyniki').empty().hide();
+            $('#loadingSpinner').hide();
+
+            localStorage.removeItem(FORM_CACHE_KEY);
+        } finally {
+            blokujAutoCache = false;
+        }
+    }
+
+    $('#clearOfferBtn').on('click', function() {
+        wyczyscOferte();
+    });
+
     // === AUTOMATYCZNY CACHE FORMULARZA ===
-    
+
     function zapiszFormularzDoCache() {
         const formData = {
             nazwa_produktu: $('[name="nazwa_produktu"]').val(),
             naklad: $('[name="naklad"]').val(),
-            rodzaj_pracy: $('#rodzajPracy').val(),  // Dodane: rodzaj pracy
+            rodzaj_pracy: $('#rodzajPracy').val(),
             format_szerokosc: $('[name="format_szerokosc"]').val(),
             format_wysokosc: $('[name="format_wysokosc"]').val(),
-            rodzaj_papieru: $('[name="rodzaj_papieru"]').val(),
-            gramatura: $('[name="gramatura"]').val(),
+            kategoria_papieru: $('#kategoriaPapieru').val(),
+            rodzaj_papieru: $('#rodzajPapieru').val(),
+            gramatura: $('#gramatura').val(),
             kolorystyka: $('#kolorystyka').val(),
             ilosc_form: $('#iloscForm').val(),
             pakowanie: $('[name="pakowanie"]').val(),
@@ -948,7 +1160,6 @@ $(document).ready(function() {
             priorytet_optymalizacji: $('[name="priorytet_optymalizacji"]').val(),
             kontrahent_id: $('#kontrahent_id').val(),
 
-            // Checkboxy
             kolory_specjalne: $('input[name="kolory_specjalne"]:checked').map(function() { return $(this).val(); }).get(),
             uszlachetnienia: $('input[name="uszlachetnienia"]:checked').map(function() { return $(this).val(); }).get(),
             obrobka: $('input[name="obrobka"]:checked').map(function() { return $(this).val(); }).get(),
@@ -957,68 +1168,78 @@ $(document).ready(function() {
             odwracanka_bazowa_ilosc_form: odwracankaBazowaLiczbaForm
         };
 
-        localStorage.setItem('kalkulatorFormCache', JSON.stringify(formData));
+        try {
+            localStorage.setItem(FORM_CACHE_KEY, JSON.stringify(formData));
+        } catch (e) {
+            console.warn('Nie udało się zapisać cache formularza:', e);
+        }
     }
 
-    function wczytajFormularzZCache() {
-        const cachedData = localStorage.getItem('kalkulatorFormCache');
+    async function wczytajFormularzZCache() {
+        const cachedData = localStorage.getItem(FORM_CACHE_KEY);
         if (!cachedData) return;
 
         blokujAutoCache = true;
         try {
-            const formData = JSON.parse(cachedData);
+            const formData = JSON.parse(cachedData) || {};
 
-            // Pola tekstowe i numeryczne
-            if (formData.nazwa_produktu) $('[name="nazwa_produktu"]').val(formData.nazwa_produktu);
-            if (formData.naklad) $('[name="naklad"]').val(formData.naklad);
-            if (formData.rodzaj_pracy) $('#rodzajPracy').val(formData.rodzaj_pracy);  // Dodane: rodzaj pracy
-            if (formData.format_szerokosc) $('[name="format_szerokosc"]').val(formData.format_szerokosc);
-            if (formData.format_wysokosc) $('[name="format_wysokosc"]').val(formData.format_wysokosc);
-            if (formData.rodzaj_papieru) $('[name="rodzaj_papieru"]').val(formData.rodzaj_papieru).trigger('change');
-            if (formData.gramatura) {
-                // Poczekaj aż gramatury się załadują
-                setTimeout(function() {
-                    $('[name="gramatura"]').val(formData.gramatura);
-                }, 200);
+            if (formData.nazwa_produktu !== undefined) $('[name="nazwa_produktu"]').val(formData.nazwa_produktu);
+            if (formData.naklad !== undefined) $('[name="naklad"]').val(formData.naklad);
+            if (formData.rodzaj_pracy !== undefined) $('#rodzajPracy').val(formData.rodzaj_pracy);
+            if (formData.format_szerokosc !== undefined) $('[name="format_szerokosc"]').val(formData.format_szerokosc);
+            if (formData.format_wysokosc !== undefined) $('[name="format_wysokosc"]').val(formData.format_wysokosc);
+
+            if (formData.kategoria_papieru && papieryData[formData.kategoria_papieru]) {
+                $('#kategoriaPapieru').val(formData.kategoria_papieru);
+                wypelnijRodzajePapieru(formData.kategoria_papieru, formData.rodzaj_papieru || '');
+                if (formData.rodzaj_papieru) {
+                    $('#rodzajPapieru').val(formData.rodzaj_papieru);
+                    await pobierzGramatury(formData.rodzaj_papieru, formData.gramatura || null);
+                } else {
+                    resetGramaturaSelect();
+                }
+            } else {
+                $('#kategoriaPapieru').val('');
+                resetRodzajPapieruSelect();
+                resetGramaturaSelect();
             }
+
             if (formData.ilosc_form) {
                 ustawIloscForm(formData.ilosc_form, false);
             }
+
             if (formData.kolorystyka) {
                 $('#kolorystyka').val(formData.kolorystyka);
-                aktualizujKolorystykeUI(false);
+            }
+            aktualizujKolorystykeUI(false);
+
+            if (formData.pakowanie !== undefined) $('[name="pakowanie"]').val(formData.pakowanie);
+            if (formData.transport !== undefined) $('[name="transport"]').val(formData.transport);
+            if (formData.marza_procent !== undefined) $('[name="marza_procent"]').val(formData.marza_procent);
+            if (formData.priorytet_optymalizacji !== undefined) $('[name="priorytet_optymalizacji"]').val(formData.priorytet_optymalizacji);
+
+            if (formData.kontrahent_id) {
+                $('#kontrahent_id').val(formData.kontrahent_id).trigger('change');
             } else {
-                aktualizujKolorystykeUI(false);
+                $('#kontrahent_id').val('');
+                $('#kontrahentPodglad').hide();
             }
-            if (formData.pakowanie) $('[name="pakowanie"]').val(formData.pakowanie);
-            if (formData.transport) $('[name="transport"]').val(formData.transport);
-            if (formData.marza_procent) $('[name="marza_procent"]').val(formData.marza_procent);
-            if (formData.priorytet_optymalizacji) $('[name="priorytet_optymalizacji"]').val(formData.priorytet_optymalizacji);
-            if (formData.kontrahent_id) $('#kontrahent_id').val(formData.kontrahent_id).trigger('change');
-            
-            // Checkboxy
+
             $('input[name="kolory_specjalne"]').prop('checked', false);
-            if (formData.kolory_specjalne) {
-                formData.kolory_specjalne.forEach(function(val) {
-                    $('input[name="kolory_specjalne"][value="' + val + '"]').prop('checked', true);
-                });
-            }
-            
+            (formData.kolory_specjalne || []).forEach(function(val) {
+                $('input[name="kolory_specjalne"][value="' + val + '"]').prop('checked', true);
+            });
+
             $('input[name="uszlachetnienia"]').prop('checked', false);
-            if (formData.uszlachetnienia) {
-                formData.uszlachetnienia.forEach(function(val) {
-                    $('input[name="uszlachetnienia"][value="' + val + '"]').prop('checked', true);
-                });
-            }
-            
+            (formData.uszlachetnienia || []).forEach(function(val) {
+                $('input[name="uszlachetnienia"][value="' + val + '"]').prop('checked', true);
+            });
+
             $('input[name="obrobka"]').prop('checked', false);
-            if (formData.obrobka) {
-                formData.obrobka.forEach(function(val) {
-                    $('input[name="obrobka"][value="' + val + '"]').prop('checked', true);
-                });
-            }
-            
-            // Checkbox cięcia papieru
+            (formData.obrobka || []).forEach(function(val) {
+                $('input[name="obrobka"][value="' + val + '"]').prop('checked', true);
+            });
+
             if (formData.wymaga_ciecia_papieru !== undefined) {
                 $('#wymagaCiecia').prop('checked', formData.wymaga_ciecia_papieru);
             }
@@ -1026,12 +1247,7 @@ $(document).ready(function() {
             if (formData.odwracanka_bazowa_ilosc_form) {
                 odwracankaBazowaLiczbaForm = formData.odwracanka_bazowa_ilosc_form;
             }
-            if (formData.odwracanka) {
-                $('#odwracankaCheckbox').prop('checked', true);
-                $('#odwracankaWrapper').removeClass('d-none');
-            } else {
-                $('#odwracankaCheckbox').prop('checked', false);
-            }
+            $('#odwracankaCheckbox').prop('checked', !!formData.odwracanka);
             aktualizujOdwracankaVisibility();
 
             console.log('Formularz wczytany z cache');
@@ -1041,19 +1257,20 @@ $(document).ready(function() {
             blokujAutoCache = false;
         }
     }
-    
-    // Wczytaj cache przy starcie
-    wczytajFormularzZCache();
-    
+
+    // Wczytaj cache przy starcie po załadowaniu papierów
+    papieryPromise.then(() => wczytajFormularzZCache());
+
     // Zapisuj przy każdej zmianie
     $('#kalkulatorForm input, #kalkulatorForm select').on('change input', function() {
+        if (blokujAutoCache) return;
         zapiszFormularzDoCache();
     });
-    
+
     // Opcjonalnie: wyczyść cache po udanej kalkulacji (wyłączone - zachowujemy dane)
     // $('#kalkulatorForm').on('submit', function() {
     //     setTimeout(function() {
-    //         localStorage.removeItem('kalkulatorFormCache');
+    //         localStorage.removeItem(FORM_CACHE_KEY);
     //     }, 1000);
     // });
 });
