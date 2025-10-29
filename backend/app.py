@@ -64,6 +64,7 @@ def index():
                          uszlachetnienia=slowniki_stare['uszlachetnienia'],
                          obrobka=slowniki_stare['obrobka'],
                          kolory_spec=slowniki_stare['kolory_specjalne'],
+                         kolorystyki=slowniki_nowe.get('kolorystyki', {}),
                          pakowanie=slowniki_stare['pakowanie'],
                          transport=slowniki_stare['transport'],
                          priorytety=slowniki_stare.get('priorytety', {}),
@@ -222,6 +223,34 @@ def manage_slownik(kategoria, operacja):
                 )
             elif operacja == 'usun':
                 wynik = slowniki_mgr.usun_jednostke(dane['kod'])
+            else:
+                return jsonify({"error": "Nieznana operacja"}), 400
+
+        # KOLORYSTYKI DRUKU
+        elif kategoria == 'kolorystyki':
+            if operacja == 'dodaj':
+                wynik = slowniki_mgr.dodaj_kolorystyke(
+                    dane['nazwa'],
+                    dane.get('kolory_przod', 0),
+                    dane.get('kolory_tyl', 0),
+                    dane.get('mnoznik_przelotow', 1.0),
+                    dane.get('domyslna_ilosc_form', 1),
+                    dane.get('etykieta'),
+                    dane.get('opis', '')
+                )
+            elif operacja == 'edytuj':
+                wynik = slowniki_mgr.edytuj_kolorystyke(
+                    dane['stara_nazwa'],
+                    dane.get('nowa_nazwa'),
+                    dane.get('kolory_przod'),
+                    dane.get('kolory_tyl'),
+                    dane.get('mnoznik_przelotow'),
+                    dane.get('domyslna_ilosc_form'),
+                    dane.get('etykieta'),
+                    dane.get('opis')
+                )
+            elif operacja == 'usun':
+                wynik = slowniki_mgr.usun_kolorystyke(dane['nazwa'])
             else:
                 return jsonify({"error": "Nieznana operacja"}), 400
 

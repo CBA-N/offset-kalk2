@@ -35,6 +35,7 @@ class SlownikiManager:
             USZLACHETNIENIA,
             OBROBKA_WYKONCZ,
             KOLORY_SPECJALNE,
+            KOLORYSTYKI_DRUKU,
             PAKOWANIE,
             TRANSPORT,
             FORMATY_ARKUSZY,
@@ -52,6 +53,7 @@ class SlownikiManager:
             "uszlachetnienia": USZLACHETNIENIA,
             "obrobka": OBROBKA_WYKONCZ,
             "kolory_specjalne": KOLORY_SPECJALNE,
+            "kolorystyki": KOLORYSTYKI_DRUKU,
             "pakowanie": PAKOWANIE,
             "transport": TRANSPORT,
             "formaty": FORMATY_ARKUSZY,
@@ -891,15 +893,161 @@ class SlownikiManager:
         """Usuń kolor specjalny"""
         if nazwa not in self.slowniki['kolory_specjalne']:
             raise ValueError(f"Kolor '{nazwa}' nie istnieje")
-        
+
         del self.slowniki['kolory_specjalne'][nazwa]
         self._zapisz_zmiane('kolory_specjalne', 'usunięcie', nazwa)
         self.zapisz_slowniki()
-        
+
         return True
-    
+
+    # ==================== KOLORYSTYKI DRUKU ====================
+
+    def get_kolorystyki(self) -> Dict[str, Any]:
+        kolorystyki = self.slowniki.get('kolorystyki')
+        if not isinstance(kolorystyki, dict):
+            kolorystyki = {}
+            self.slowniki['kolorystyki'] = kolorystyki
+        return kolorystyki
+
+    @staticmethod
+    def _sanitize_int(value: Any, pole: str, min_value: int = 0) -> int:
+        try:
+            wartosc = int(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{pole} musi być liczbą całkowitą")
+
+        if wartosc < min_value:
+            if min_value > 0:
+                raise ValueError(f"{pole} musi być większe lub równe {min_value}")
+            raise ValueError(f"{pole} nie może być ujemne")
+
+        return wartosc
+
+    @staticmethod
+    def _sanitize_float(value: Any, pole: str, min_value: float = 0.0) -> float:
+        try:
+            wartosc = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{pole} musi być liczbą")
+
+        if wartosc <= min_value:
+            raise ValueError(f"{pole} musi być większe niż {min_value}")
+
+        return wartosc
+
+    def _zbuduj_rekord_kolorystyki(self,
+                                   kolory_przod: Any,
+                                   kolory_tyl: Any,
+                                   mnoznik_przelotow: Any,
+                                   domyslna_ilosc_form: Any,
+                                   etykieta: Optional[str],
+                                   opis: Optional[str]) -> Dict[str, Any]:
+        kolory_przod_int = self._sanitize_int(kolory_przod, 'Liczba kolorów na awersie', 0)
+        kolory_tyl_int = self._sanitize_int(kolory_tyl, 'Liczba kolorów na rewersie', 0)
+        domyslna_formy = self._sanitize_int(domyslna_ilosc_form if domyslna_ilosc_form is not None else 1,
+                                            'Domyślna liczba form', 1)
+        mnoznik = self._sanitize_float(mnoznik_przelotow if mnoznik_przelotow is not None else 1.0,
+                                       'Mnożnik przelotów', 0.0)
+
+        rekord = {
+            'kolory_przod': kolory_przod_int,
+            'kolory_tyl': kolory_tyl_int,
+            'mnoznik_przelotow': mnoznik,
+            'domyslna_ilosc_form': domyslna_formy,
+            'opis': (opis or '').strip()
+        }
+
+        etykieta_wynik = (etykieta or '').strip()
+        if etykieta_wynik:
+            rekord['etykieta'] = etykieta_wynik
+        else:
+            rekord['etykieta'] = ''
+
+        return rekord
+
+    def dodaj_kolorystyke(self,
+                           nazwa: str,
+                           kolory_przod: Any,
+                           kolory_tyl: Any,
+                           mnoznik_przelotow: Any,
+                           domyslna_ilosc_form: Any,
+                           etykieta: Optional[str] = None,
+                           opis: str = '') -> Dict[str, Any]:
+        nazwa_norm = (nazwa or '').strip()
+        if not nazwa_norm:
+            raise ValueError('Nazwa kolorystyki jest wymagana')
+
+        kolorystyki = self.get_kolorystyki()
+        if nazwa_norm in kolorystyki:
+            raise ValueError(f"Kolorystyka '{nazwa_norm}' już istnieje")
+
+        rekord = self._zbuduj_rekord_kolorystyki(kolory_przod, kolory_tyl,
+                                                  mnoznik_przelotow, domyslna_ilosc_form,
+                                                  etykieta if etykieta is not None else nazwa_norm,
+                                                  opis)
+
+        kolorystyki[nazwa_norm] = rekord
+        self._zapisz_zmiane('kolorystyki', 'dodanie', nazwa_norm)
+        self.zapisz_slowniki()
+
+        return rekord
+
+    def edytuj_kolorystyke(self,
+                            stara_nazwa: str,
+                            nowa_nazwa: Optional[str] = None,
+                            kolory_przod: Any = None,
+                            kolory_tyl: Any = None,
+                            mnoznik_przelotow: Any = None,
+                            domyslna_ilosc_form: Any = None,
+                            etykieta: Optional[str] = None,
+                            opis: Optional[str] = None) -> Dict[str, Any]:
+        kolorystyki = self.get_kolorystyki()
+        if stara_nazwa not in kolorystyki:
+            raise ValueError(f"Kolorystyka '{stara_nazwa}' nie istnieje")
+
+        rekord = kolorystyki[stara_nazwa]
+
+        if nowa_nazwa and nowa_nazwa != stara_nazwa:
+            nowa_nazwa_norm = nowa_nazwa.strip()
+            if not nowa_nazwa_norm:
+                raise ValueError('Nowa nazwa kolorystyki nie może być pusta')
+            if nowa_nazwa_norm in kolorystyki:
+                raise ValueError(f"Kolorystyka '{nowa_nazwa_norm}' już istnieje")
+            kolorystyki[nowa_nazwa_norm] = rekord
+            del kolorystyki[stara_nazwa]
+            stara_nazwa = nowa_nazwa_norm
+
+        if kolory_przod is not None:
+            rekord['kolory_przod'] = self._sanitize_int(kolory_przod, 'Liczba kolorów na awersie', 0)
+        if kolory_tyl is not None:
+            rekord['kolory_tyl'] = self._sanitize_int(kolory_tyl, 'Liczba kolorów na rewersie', 0)
+        if mnoznik_przelotow is not None:
+            rekord['mnoznik_przelotow'] = self._sanitize_float(mnoznik_przelotow, 'Mnożnik przelotów', 0.0)
+        if domyslna_ilosc_form is not None:
+            rekord['domyslna_ilosc_form'] = self._sanitize_int(domyslna_ilosc_form, 'Domyślna liczba form', 1)
+        if etykieta is not None:
+            rekord['etykieta'] = etykieta.strip() if etykieta else ''
+        if opis is not None:
+            rekord['opis'] = opis.strip()
+
+        self._zapisz_zmiane('kolorystyki', 'edycja', stara_nazwa)
+        self.zapisz_slowniki()
+
+        return rekord
+
+    def usun_kolorystyke(self, nazwa: str) -> bool:
+        kolorystyki = self.get_kolorystyki()
+        if nazwa not in kolorystyki:
+            raise ValueError(f"Kolorystyka '{nazwa}' nie istnieje")
+
+        del kolorystyki[nazwa]
+        self._zapisz_zmiane('kolorystyki', 'usunięcie', nazwa)
+        self.zapisz_slowniki()
+
+        return True
+
     # ==================== PAKOWANIE ====================
-    
+
     def dodaj_pakowanie(self, nazwa: str, cena_pln: float, opis: str = '') -> Dict:
         """Dodaj nową opcję pakowania"""
         if nazwa in self.slowniki['pakowanie']:

@@ -120,18 +120,27 @@
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Kolorystyka</label>
-                        <select class="form-select" name="kolorystyka" required>
-                            <option value="4+0">4+0 (jednostronny)</option>
-                            <option value="4+4">4+4 (dwustronny)</option>
-                            <option value="4+1">4+1 (4 kolory + 1 kolor)</option>
+                        <select class="form-select" name="kolorystyka" id="kolorystyka" required>
+                            {% for kod, dane in kolorystyki.items() %}
+                            <option value="{{ kod }}">{{ dane.etykieta if dane.etykieta else kod }}</option>
+                            {% endfor %}
                         </select>
+                        <small class="text-muted d-block mt-1" id="kolorystykaOpis"></small>
                     </div>
                 </div>
-                
+
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label class="form-label">Ilość form drukowych</label>
-                        <input type="number" class="form-control" name="ilosc_form" value="4" min="1" max="8" required>
+                        <input type="number" class="form-control" name="ilosc_form" id="iloscForm"
+                               value="4" min="1" max="16" required>
+                        <div class="form-check mt-2 d-none" id="odwracankaWrapper">
+                            <input class="form-check-input" type="checkbox" id="odwracankaCheckbox">
+                            <label class="form-check-label" for="odwracankaCheckbox">
+                                Odwracanka
+                                <small class="text-muted d-block">Wykorzystaj druk odwracany, aby zmniejszyć liczbę form o połowę.</small>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 
@@ -291,7 +300,148 @@
 
 {% block extra_js %}
 <script>
+const kolorystykiSlownik = {{ kolorystyki | tojson }};
+
 $(document).ready(function() {
+    let odwracankaBazowaLiczbaForm = null;
+    let programmaticFormChange = false;
+    let blokujAutoCache = false;
+
+    function pobierzDomyslnaIloscForm(definicja) {
+        if (!definicja) return 1;
+
+        let wartosc = parseInt(definicja.domyslna_ilosc_form, 10);
+        if (!wartosc || wartosc <= 0) {
+            let licznik = 0;
+            const front = parseInt(definicja.kolory_przod, 10);
+            const tyl = parseInt(definicja.kolory_tyl, 10);
+            if (!isNaN(front) && front > 0) licznik += 1;
+            if (!isNaN(tyl) && tyl > 0) licznik += 1;
+            wartosc = licznik > 0 ? licznik : 1;
+        }
+        return wartosc;
+    }
+
+    function aktualizujOdwracankaVisibility() {
+        const $wrapper = $('#odwracankaWrapper');
+        const $checkbox = $('#odwracankaCheckbox');
+        const value = parseInt($('#iloscForm').val(), 10);
+
+        if ($checkbox.is(':checked')) {
+            $wrapper.removeClass('d-none');
+            return;
+        }
+
+        if (!isNaN(value) && value > 0 && value % 2 === 0) {
+            $wrapper.removeClass('d-none');
+            odwracankaBazowaLiczbaForm = value;
+        } else {
+            $wrapper.addClass('d-none');
+            $checkbox.prop('checked', false);
+            odwracankaBazowaLiczbaForm = null;
+        }
+    }
+
+    function ustawIloscForm(value, aktualizujCache = true) {
+        const wartosc = parseInt(value, 10);
+        if (isNaN(wartosc) || wartosc <= 0) return;
+
+        const $input = $('#iloscForm');
+        programmaticFormChange = true;
+        $input.val(wartosc);
+        programmaticFormChange = false;
+        aktualizujOdwracankaVisibility();
+
+        if (aktualizujCache && !blokujAutoCache && typeof zapiszFormularzDoCache === 'function') {
+            zapiszFormularzDoCache();
+        }
+    }
+
+    function aktualizujKolorystykeUI(ustawDomyslneFormy = true) {
+        const kod = $('#kolorystyka').val();
+        const definicja = kolorystykiSlownik ? kolorystykiSlownik[kod] : null;
+        const $opis = $('#kolorystykaOpis');
+
+        if (!definicja) {
+            $opis.text('');
+            if (ustawDomyslneFormy) {
+                $('#odwracankaCheckbox').prop('checked', false);
+                odwracankaBazowaLiczbaForm = null;
+                ustawIloscForm(4, false);
+            } else {
+                aktualizujOdwracankaVisibility();
+            }
+            return;
+        }
+
+        const opisCzesci = [];
+        if (definicja.opis) {
+            opisCzesci.push(definicja.opis);
+        }
+        if (definicja.kolory_przod !== undefined && definicja.kolory_tyl !== undefined) {
+            opisCzesci.push(`Kolory: ${definicja.kolory_przod} / ${definicja.kolory_tyl}`);
+        }
+        if (definicja.domyslna_ilosc_form) {
+            opisCzesci.push(`Sugerowane formy: ${definicja.domyslna_ilosc_form}`);
+        }
+
+        $opis.text(opisCzesci.filter(Boolean).join(' • '));
+
+        if (ustawDomyslneFormy) {
+            $('#odwracankaCheckbox').prop('checked', false);
+            odwracankaBazowaLiczbaForm = null;
+            const domyslne = pobierzDomyslnaIloscForm(definicja);
+            ustawIloscForm(domyslne);
+        } else {
+            aktualizujOdwracankaVisibility();
+        }
+    }
+
+    $('#kolorystyka').on('change', function() {
+        aktualizujKolorystykeUI(true);
+    });
+
+    $('#iloscForm').on('input change', function() {
+        if (programmaticFormChange) return;
+
+        const value = parseInt($(this).val(), 10);
+        if (!$('#odwracankaCheckbox').is(':checked')) {
+            if (!isNaN(value) && value > 0 && value % 2 === 0) {
+                odwracankaBazowaLiczbaForm = value;
+            } else {
+                odwracankaBazowaLiczbaForm = null;
+            }
+        }
+        aktualizujOdwracankaVisibility();
+    });
+
+    $('#odwracankaCheckbox').on('change', function() {
+        const $input = $('#iloscForm');
+        if ($(this).is(':checked')) {
+            if (!odwracankaBazowaLiczbaForm) {
+                const current = parseInt($input.val(), 10);
+                if (isNaN(current) || current <= 0 || current % 2 !== 0) {
+                    $(this).prop('checked', false);
+                    return;
+                }
+                odwracankaBazowaLiczbaForm = current;
+            }
+
+            const nowa = Math.max(1, Math.round(odwracankaBazowaLiczbaForm / 2));
+            ustawIloscForm(nowa);
+        } else {
+            const bazowa = odwracankaBazowaLiczbaForm;
+            odwracankaBazowaLiczbaForm = null;
+            if (bazowa) {
+                ustawIloscForm(bazowa);
+            } else {
+                aktualizujOdwracankaVisibility();
+            }
+        }
+    });
+
+    aktualizujKolorystykeUI(true);
+
     // === ŁADOWANIE KONTRAHENTÓW ===
     function zaladujKontrahentow() {
         $.get('/api/kontrahenci', function(response) {
@@ -339,7 +489,9 @@ $(document).ready(function() {
     
     if (urlParams.has('duplikat_z')) {
         const duplikatId = urlParams.get('duplikat_z');
-        
+
+        blokujAutoCache = true;
+
         // Wypełnij pola formularza
         if (urlParams.has('nazwa_produktu')) {
             $('#nazwaProduktu').val(urlParams.get('nazwa_produktu'));
@@ -391,11 +543,12 @@ $(document).ready(function() {
                 });
             }, 500);
         }
-        
+
         if (urlParams.has('kolorystyka')) {
             $('#kolorystyka').val(urlParams.get('kolorystyka'));
+            aktualizujKolorystykeUI(false);
         }
-        
+
         // Listy (kolory specjalne, uszlachetnienia, obróbka)
         if (urlParams.has('kolory_specjalne')) {
             try {
@@ -451,13 +604,15 @@ $(document).ready(function() {
         setTimeout(() => {
             const alertHtml = `
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-copy"></i> <strong>Załadowano dane z oferty #${duplikatId}</strong> — 
+                    <i class="fas fa-copy"></i> <strong>Załadowano dane z oferty #${duplikatId}</strong> —
                     Możesz teraz edytować parametry i wygenerować nową ofertę.
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             `;
             $('#kalkulatorForm').prepend(alertHtml);
         }, 300);
+
+        blokujAutoCache = false;
     }
     
     
@@ -785,31 +940,34 @@ $(document).ready(function() {
             format_wysokosc: $('[name="format_wysokosc"]').val(),
             rodzaj_papieru: $('[name="rodzaj_papieru"]').val(),
             gramatura: $('[name="gramatura"]').val(),
-            kolorystyka: $('[name="kolorystyka"]').val(),
-            ilosc_form: $('[name="ilosc_form"]').val(),
+            kolorystyka: $('#kolorystyka').val(),
+            ilosc_form: $('#iloscForm').val(),
             pakowanie: $('[name="pakowanie"]').val(),
             transport: $('[name="transport"]').val(),
             marza_procent: $('[name="marza_procent"]').val(),
             priorytet_optymalizacji: $('[name="priorytet_optymalizacji"]').val(),
             kontrahent_id: $('#kontrahent_id').val(),
-            
+
             // Checkboxy
             kolory_specjalne: $('input[name="kolory_specjalne"]:checked').map(function() { return $(this).val(); }).get(),
             uszlachetnienia: $('input[name="uszlachetnienia"]:checked').map(function() { return $(this).val(); }).get(),
             obrobka: $('input[name="obrobka"]:checked').map(function() { return $(this).val(); }).get(),
-            wymaga_ciecia_papieru: $('#wymagaCiecia').is(':checked')
+            wymaga_ciecia_papieru: $('#wymagaCiecia').is(':checked'),
+            odwracanka: $('#odwracankaCheckbox').is(':checked'),
+            odwracanka_bazowa_ilosc_form: odwracankaBazowaLiczbaForm
         };
-        
+
         localStorage.setItem('kalkulatorFormCache', JSON.stringify(formData));
     }
-    
+
     function wczytajFormularzZCache() {
         const cachedData = localStorage.getItem('kalkulatorFormCache');
         if (!cachedData) return;
-        
+
+        blokujAutoCache = true;
         try {
             const formData = JSON.parse(cachedData);
-            
+
             // Pola tekstowe i numeryczne
             if (formData.nazwa_produktu) $('[name="nazwa_produktu"]').val(formData.nazwa_produktu);
             if (formData.naklad) $('[name="naklad"]').val(formData.naklad);
@@ -823,8 +981,15 @@ $(document).ready(function() {
                     $('[name="gramatura"]').val(formData.gramatura);
                 }, 200);
             }
-            if (formData.kolorystyka) $('[name="kolorystyka"]').val(formData.kolorystyka);
-            if (formData.ilosc_form) $('[name="ilosc_form"]').val(formData.ilosc_form);
+            if (formData.ilosc_form) {
+                ustawIloscForm(formData.ilosc_form, false);
+            }
+            if (formData.kolorystyka) {
+                $('#kolorystyka').val(formData.kolorystyka);
+                aktualizujKolorystykeUI(false);
+            } else {
+                aktualizujKolorystykeUI(false);
+            }
             if (formData.pakowanie) $('[name="pakowanie"]').val(formData.pakowanie);
             if (formData.transport) $('[name="transport"]').val(formData.transport);
             if (formData.marza_procent) $('[name="marza_procent"]').val(formData.marza_procent);
@@ -857,10 +1022,23 @@ $(document).ready(function() {
             if (formData.wymaga_ciecia_papieru !== undefined) {
                 $('#wymagaCiecia').prop('checked', formData.wymaga_ciecia_papieru);
             }
-            
+
+            if (formData.odwracanka_bazowa_ilosc_form) {
+                odwracankaBazowaLiczbaForm = formData.odwracanka_bazowa_ilosc_form;
+            }
+            if (formData.odwracanka) {
+                $('#odwracankaCheckbox').prop('checked', true);
+                $('#odwracankaWrapper').removeClass('d-none');
+            } else {
+                $('#odwracankaCheckbox').prop('checked', false);
+            }
+            aktualizujOdwracankaVisibility();
+
             console.log('Formularz wczytany z cache');
         } catch (e) {
             console.error('Błąd wczytywania cache formularza:', e);
+        } finally {
+            blokujAutoCache = false;
         }
     }
     
