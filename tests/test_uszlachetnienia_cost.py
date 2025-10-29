@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import unittest
 
@@ -56,6 +57,28 @@ class KalkulatorUszlachetnieniaTest(unittest.TestCase):
             suma_elementow,
             places=2,
             msg="Koszt uszlachetnień musi być doliczony do sumy kosztów"
+        )
+
+    def test_obrobka_arkuszowa_skalowana_do_arkuszy(self):
+        obrobka_nazwa = 'Cięcie formatowe (standardowe)'
+        dane_obrobki = self.manager.get_slownik('obrobka')[obrobka_nazwa]
+
+        wynik = self.kalkulator.kalkuluj_obrobke(
+            [obrobka_nazwa],
+            naklad=1000,
+            powierzchnia_arkusza=0.5,
+            ilosc_arkuszy=500,
+            waga_kg=0,
+        )
+
+        match = re.search(r'([\d.,]+)', dane_obrobki.get('jednostka', '1000 ark'))
+        wartosc_jednostki = float(match.group(1).replace(',', '.')) if match else 1000.0
+        oczekiwany_koszt = dane_obrobki['cena_pln'] * (500 / wartosc_jednostki)
+        self.assertAlmostEqual(
+            wynik['koszt'],
+            oczekiwany_koszt,
+            places=4,
+            msg='Koszt obróbki arkuszowej powinien skalować się względem arkuszy',
         )
 
 

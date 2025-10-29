@@ -154,7 +154,8 @@ def manage_slownik(kategoria, operacja):
                     dane['cena_pln'],
                     dane.get('jednostka', '1000 ark'),
                     dane.get('opis', ''),
-                    dane.get('typ_jednostki', 'sztukowa')
+                    dane.get('typ_jednostki', 'sztukowa'),
+                    dane.get('kod_jednostki')
                 )
             elif operacja == 'edytuj':
                 wynik = slowniki_mgr.edytuj_uszlachetnienie(
@@ -164,13 +165,14 @@ def manage_slownik(kategoria, operacja):
                     dane.get('cena_pln'),
                     dane.get('jednostka'),
                     dane.get('opis'),
-                    dane.get('typ_jednostki')
+                    dane.get('typ_jednostki'),
+                    dane.get('kod_jednostki')
                 )
             elif operacja == 'usun':
                 wynik = slowniki_mgr.usun_uszlachetnienie(dane['nazwa'])
             else:
                 return jsonify({"error": "Nieznana operacja"}), 400
-        
+
         # OBRÓBKA
         elif kategoria == 'obrobka':
             if operacja == 'dodaj':
@@ -179,7 +181,8 @@ def manage_slownik(kategoria, operacja):
                     dane['cena_pln'],
                     dane.get('jednostka', '1000 szt'),
                     dane.get('opis', ''),
-                    dane.get('typ_jednostki', 'sztukowa')
+                    dane.get('typ_jednostki', 'sztukowa'),
+                    dane.get('kod_jednostki')
                 )
             elif operacja == 'edytuj':
                 wynik = slowniki_mgr.edytuj_obrobke(
@@ -188,13 +191,40 @@ def manage_slownik(kategoria, operacja):
                     dane.get('cena_pln'),
                     dane.get('jednostka'),
                     dane.get('opis'),
-                    dane.get('typ_jednostki')
+                    dane.get('typ_jednostki'),
+                    dane.get('kod_jednostki')
                 )
             elif operacja == 'usun':
                 wynik = slowniki_mgr.usun_obrobke(dane['nazwa'])
             else:
                 return jsonify({"error": "Nieznana operacja"}), 400
-        
+
+        # JEDNOSTKI
+        elif kategoria == 'jednostki':
+            if operacja == 'dodaj':
+                wynik = slowniki_mgr.dodaj_jednostke(
+                    dane['kod'],
+                    dane['etykieta'],
+                    dane['typ_jednostki'],
+                    dane['mnoznik_domyslny'],
+                    dane.get('slowa_kluczowe', []),
+                    dane.get('zrodlo_bazowej_ilosci')
+                )
+            elif operacja == 'edytuj':
+                wynik = slowniki_mgr.edytuj_jednostke(
+                    dane['stary_kod'],
+                    dane.get('nowy_kod'),
+                    dane.get('etykieta'),
+                    dane.get('typ_jednostki'),
+                    dane.get('mnoznik_domyslny'),
+                    dane.get('slowa_kluczowe'),
+                    dane.get('zrodlo_bazowej_ilosci')
+                )
+            elif operacja == 'usun':
+                wynik = slowniki_mgr.usun_jednostke(dane['kod'])
+            else:
+                return jsonify({"error": "Nieznana operacja"}), 400
+
         # KOLORY SPECJALNE
         elif kategoria == 'kolory_specjalne':
             if operacja == 'dodaj':
