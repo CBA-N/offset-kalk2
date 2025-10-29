@@ -73,17 +73,56 @@ class KalkulacjaZlecenia:
 
 class KalkulatorDruku:
     """Główna klasa kalkulatora"""
-    
-    def __init__(self):
-        self.papiery = PAPIERY
-        self.formaty = FORMATY_ARKUSZY
-        self.uszlachetnienia = USZLACHETNIENIA
-        self.obrobka = OBROBKA_WYKONCZ
-        self.kolory_spec = KOLORY_SPECJALNE
-        self.pakowanie = PAKOWANIE
-        self.transport = TRANSPORT
-        self.priorytety = PRIORYTETY_OPTYMALIZACJI
-        self.stawki = STAWKI_DRUKARNI
+
+    def __init__(self, slowniki_path: str | None = None, stawki_path: str | None = None):
+        """Inicjalizuje kalkulator.
+
+        Parametry ``slowniki_path`` i ``stawki_path`` są opcjonalne i utrzymują
+        kompatybilność wsteczną z wcześniejszym API oczekującym ścieżek do plików
+        JSON. Gdy nie zostaną podane korzystamy z wbudowanych słowników
+        wygenerowanych w ``slowniki_danych.py``.
+        """
+
+        if slowniki_path:
+            with open(slowniki_path, "r", encoding="utf-8") as f:
+                slowniki_json = json.load(f)
+            self.papiery = slowniki_json.get("papiery", PAPIERY)
+            self.formaty = slowniki_json.get("formaty_arkuszy", FORMATY_ARKUSZY)
+            self.uszlachetnienia = slowniki_json.get("uszlachetnienia", USZLACHETNIENIA)
+            self.obrobka = slowniki_json.get("obrobka", OBROBKA_WYKONCZ)
+            self.kolory_spec = slowniki_json.get("kolory_specjalne", KOLORY_SPECJALNE)
+            self.pakowanie = slowniki_json.get("pakowanie", PAKOWANIE)
+            self.transport = slowniki_json.get("transport", TRANSPORT)
+            self.priorytety = slowniki_json.get("priorytety_optymalizacji", PRIORYTETY_OPTYMALIZACJI)
+            self.jednostki = slowniki_json.get("jednostki", JEDNOSTKI)
+        else:
+            self.papiery = PAPIERY
+            self.formaty = FORMATY_ARKUSZY
+            self.uszlachetnienia = USZLACHETNIENIA
+            self.obrobka = OBROBKA_WYKONCZ
+            self.kolory_spec = KOLORY_SPECJALNE
+            self.pakowanie = PAKOWANIE
+            self.transport = TRANSPORT
+            self.priorytety = PRIORYTETY_OPTYMALIZACJI
+            self.jednostki = JEDNOSTKI
+
+        if stawki_path:
+            with open(stawki_path, "r", encoding="utf-8") as f:
+                stawki_json = json.load(f)
+            # Obsłuż starszy format stawek używany w testach kompletnych
+            if "roboczogodzina_przygotowania" not in stawki_json:
+                stawki_json = {
+                    **stawki_json,
+                    "roboczogodzina_przygotowania": stawki_json.get("stawka_godzinowa_pln", 0),
+                    "roboczogodzina_druku": stawki_json.get("stawka_godzinowa_pln", 0),
+                    "stawka_nakladu_1000_arkuszy": stawki_json.get("stawka_nakladu_1000_arkuszy", 0),
+                    "koszt_formy_drukowej": stawki_json.get("koszt_formy_drukowej", 0),
+                    "szybkosc_druku_arkuszy_h": stawki_json.get("szybkosc_druku_arkuszy_h", 0),
+                }
+            self.stawki = stawki_json
+        else:
+            self.stawki = STAWKI_DRUKARNI
+
         self.ciecie_papieru = {}  # Konfiguracja cięcia (wstrzyknięta przez adapter)
         
     def oblicz_uzytki_na_arkuszu(self, 
@@ -285,7 +324,15 @@ class KalkulatorDruku:
         """Kalkulacja uszlachetnień z elastycznymi jednostkami"""
         koszt = 0
         czas = 0
-        
+
+        powierzchnia_calkowita_m2 = (powierzchnia_arkusza or 0) * (ilosc_arkuszy or 0)
+        kontekst_jednostek = {
+            'ilosc_arkuszy': ilosc_arkuszy or 0,
+            'powierzchnia_calkowita_m2': powierzchnia_calkowita_m2,
+            'naklad': naklad or 0,
+            'waga_kg': waga_kg or 0,
+        }
+
         for uszlachetnienie in lista_uszlachetnien:
             if uszlachetnienie in self.uszlachetnienia:
                 dane = self.uszlachetnienia[uszlachetnienie]
@@ -294,46 +341,51 @@ class KalkulatorDruku:
                 typ_jednostki = dane.get('typ_jednostki')
                 jednostka_str = dane.get('jednostka', '')
 
-                if cena_pln is not None and typ_jednostki:
-                    jednostka_wartosc = 1.0
-                    match = re.search(r'([\d.,]+)', jednostka_str)
-                    if match:
-                        jednostka_wartosc = float(match.group(1).replace(',', '.')) or 1.0
+                if cena_pln is not None:
+                    definicja = self._resolve_jednostka(dane.get('kod_jednostki'), jednostka_str)
 
-                    if typ_jednostki == 'sztukowa':
-                        ilosc_bazowa = 0
-                        jednostka_lower = jednostka_str.lower()
-                        if 'ark' in jednostka_lower:
-                            ilosc_bazowa = ilosc_arkuszy or 0
-                        else:
-                            ilosc_bazowa = naklad or 0
-                        if ilosc_bazowa == 0:
-                            ilosc_bazowa = ilosc_arkuszy or naklad
-                        if ilosc_bazowa is None:
+                    if definicja:
+                        ilosc_jednostek = self._oblicz_wartosc_jednostki(definicja, kontekst_jednostek)
+                        koszt += cena_pln * ilosc_jednostek
+                    elif typ_jednostki:
+                        jednostka_wartosc = 1.0
+                        match = re.search(r'([\d.,]+)', jednostka_str)
+                        if match:
+                            jednostka_wartosc = float(match.group(1).replace(',', '.')) or 1.0
+
+                        if typ_jednostki == 'sztukowa':
                             ilosc_bazowa = 0
-                        koszt += cena_pln * (ilosc_bazowa / jednostka_wartosc)
+                            jednostka_lower = jednostka_str.lower()
+                            if 'ark' in jednostka_lower:
+                                ilosc_bazowa = kontekst_jednostek['ilosc_arkuszy']
+                            else:
+                                ilosc_bazowa = kontekst_jednostek['naklad']
+                            if ilosc_bazowa == 0:
+                                ilosc_bazowa = kontekst_jednostek['ilosc_arkuszy'] or kontekst_jednostek['naklad']
+                            koszt += cena_pln * (ilosc_bazowa / jednostka_wartosc)
 
-                    elif typ_jednostki == 'metrowa':
-                        powierzchnia_calkowita_m2 = powierzchnia_arkusza * ilosc_arkuszy
-                        koszt += cena_pln * (powierzchnia_calkowita_m2 / jednostka_wartosc)
+                        elif typ_jednostki == 'metrowa':
+                            koszt += cena_pln * (powierzchnia_calkowita_m2 / jednostka_wartosc)
 
-                    elif typ_jednostki == 'wagowa':
-                        koszt += cena_pln * (waga_kg / jednostka_wartosc)
+                        elif typ_jednostki == 'wagowa':
+                            koszt += cena_pln * (kontekst_jednostek['waga_kg'] / jednostka_wartosc)
 
+                        else:
+                            koszt += cena_pln
                     else:
-                        koszt += cena_pln
+                        if 'cena_za_arkusz_B2' in dane:
+                            koszt += dane['cena_za_arkusz_B2'] * ilosc_arkuszy
+                        elif 'cena_za_m2' in dane:
+                            koszt += dane['cena_za_m2'] * powierzchnia_calkowita_m2
                 else:
-                    # Zgodność wsteczna: użyj starych pól jeśli brak nowych
                     if 'cena_za_arkusz_B2' in dane:
                         koszt += dane['cena_za_arkusz_B2'] * ilosc_arkuszy
                     elif 'cena_za_m2' in dane:
-                        koszt += dane['cena_za_m2'] * powierzchnia_arkusza * ilosc_arkuszy
+                        koszt += dane['cena_za_m2'] * powierzchnia_calkowita_m2
 
-                # Koszt matrycy jeśli istnieje
                 if 'koszt_matrycy' in dane:
                     koszt += dane['koszt_matrycy']
 
-                # Czas przygotowania (wydobycie z opisu lub wartość domyślna)
                 if 'czas_przygotowania_min' in dane:
                     czas += dane['czas_przygotowania_min'] / 60
                 else:
@@ -343,6 +395,58 @@ class KalkulatorDruku:
                         czas += int(match.group(1)) / 60
 
         return {'koszt': koszt, 'czas_h': czas}
+
+    def _resolve_jednostka(self, kod=None, jednostka_str: str = None):
+        jednostki = getattr(self, 'jednostki', {}) or {}
+        if kod:
+            kod_norm = kod.strip().upper()
+            definicja = jednostki.get(kod_norm)
+            if definicja:
+                return definicja
+        if jednostka_str:
+            tekst = jednostka_str.lower()
+            for definicja in jednostki.values():
+                for slowo in definicja.get('slowa_kluczowe', []):
+                    if slowo.lower() in tekst:
+                        return definicja
+        return None
+
+    def _oblicz_wartosc_jednostki(self, definicja: Dict[str, float], kontekst: Dict[str, float]) -> float:
+        try:
+            mnoznik = float(definicja.get('mnoznik_domyslny', 1))
+        except (TypeError, ValueError):
+            mnoznik = 1.0
+        if mnoznik <= 0:
+            mnoznik = 1.0
+
+        typ = definicja.get('typ_jednostki', 'sztukowa')
+        zrodlo = definicja.get('zrodlo_bazowej_ilosci', 'naklad')
+
+        source_map = {
+            'naklad': ['naklad', 'ilosc_arkuszy'],
+            'arkusze': ['ilosc_arkuszy', 'naklad'],
+            'powierzchnia': ['powierzchnia_calkowita_m2'],
+            'powierzchnia_m2': ['powierzchnia_calkowita_m2'],
+            'waga': ['waga_kg'],
+            'waga_kg': ['waga_kg'],
+        }
+
+        def pobierz_wartosc(klucze):
+            for klucz in klucze:
+                if klucz in kontekst and kontekst[klucz]:
+                    return kontekst[klucz]
+            return 0
+
+        if typ == 'sztukowa':
+            wartosc = pobierz_wartosc(source_map.get(zrodlo, [zrodlo, 'naklad', 'ilosc_arkuszy']))
+        elif typ == 'metrowa':
+            wartosc = kontekst.get('powierzchnia_calkowita_m2', 0)
+        elif typ == 'wagowa':
+            wartosc = kontekst.get('waga_kg', 0)
+        else:
+            wartosc = pobierz_wartosc(source_map.get(zrodlo, ['naklad', 'ilosc_arkuszy']))
+
+        return (wartosc or 0) / mnoznik
     
     def kalkuluj_obrobke(self,
                         lista_obrobki: List[str],
@@ -353,43 +457,43 @@ class KalkulatorDruku:
         """Kalkulacja obróbki wykończeniowej z elastycznymi jednostkami"""
         koszt = 0
         czas = 0
-        
+
+        powierzchnia_calkowita_m2 = (powierzchnia_arkusza or 0) * (ilosc_arkuszy or 0)
+        kontekst_jednostek = {
+            'naklad': naklad or 0,
+            'ilosc_arkuszy': ilosc_arkuszy or 0,
+            'powierzchnia_calkowita_m2': powierzchnia_calkowita_m2,
+            'waga_kg': waga_kg or 0,
+        }
+
         for obrobka in lista_obrobki:
             if obrobka in self.obrobka:
                 dane = self.obrobka[obrobka]
                 cena_pln = dane.get('cena_pln', 0)
-                typ_jednostki = dane.get('typ_jednostki', 'sztukowa')  # domyślnie sztukowa
-                
-                # Obliczenie kosztu w zależności od typu jednostki
-                if typ_jednostki == 'sztukowa':
-                    # Np. "80 PLN / 1000 szt" -> parsuj liczbę z jednostki
-                    jednostka_str = dane.get('jednostka', '1000 szt')
-                    import re
-                    match = re.search(r'(\d+)', jednostka_str)
-                    mnoznik = int(match.group(1)) if match else 1000
-                    koszt += cena_pln * (naklad / mnoznik)
-                    
-                elif typ_jednostki == 'metrowa':
-                    # Np. "120 PLN / 1 m²" -> parsuj liczbę z jednostki
-                    jednostka_str = dane.get('jednostka', '1 m²')
-                    import re
-                    match = re.search(r'([\d.]+)', jednostka_str)
-                    mnoznik_m2 = float(match.group(1)) if match else 1.0
-                    powierzchnia_calkowita_m2 = powierzchnia_arkusza * ilosc_arkuszy
-                    koszt += cena_pln * (powierzchnia_calkowita_m2 / mnoznik_m2)
-                    
-                elif typ_jednostki == 'wagowa':
-                    # Np. "30 PLN / 1 kg" -> parsuj liczbę z jednostki
-                    jednostka_str = dane.get('jednostka', '1 kg')
-                    import re
-                    match = re.search(r'([\d.]+)', jednostka_str)
-                    mnoznik_kg = float(match.group(1)) if match else 1.0
-                    koszt += cena_pln * (waga_kg / mnoznik_kg)
-                
-                # Koszt przygotowania jeśli istnieje
+                typ_jednostki = dane.get('typ_jednostki', 'sztukowa')
+
+                definicja = self._resolve_jednostka(dane.get('kod_jednostki'), dane.get('jednostka'))
+
+                if definicja:
+                    ilosc_jednostek = self._oblicz_wartosc_jednostki(definicja, kontekst_jednostek)
+                    koszt += cena_pln * ilosc_jednostek
+                elif typ_jednostki:
+                    jednostka_str = dane.get('jednostka', '')
+                    match = re.search(r'([\d.,]+)', jednostka_str)
+                    jednostka_wartosc = float(match.group(1).replace(',', '.')) if match else 1.0
+
+                    if typ_jednostki == 'sztukowa':
+                        koszt += cena_pln * ((kontekst_jednostek['naklad']) / jednostka_wartosc)
+                    elif typ_jednostki == 'metrowa':
+                        koszt += cena_pln * (powierzchnia_calkowita_m2 / jednostka_wartosc)
+                    elif typ_jednostki == 'wagowa':
+                        koszt += cena_pln * (kontekst_jednostek['waga_kg'] / jednostka_wartosc)
+                    else:
+                        koszt += cena_pln
+
                 if 'koszt_przygotowania' in dane:
                     koszt += dane['koszt_przygotowania']
-                
+
                 # Czas (parsowanie z opisu jeśli istnieje)
                 if 'czas_min' in dane:
                     czas += dane['czas_min'] / 60

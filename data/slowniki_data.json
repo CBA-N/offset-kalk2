@@ -1669,6 +1669,21 @@
         "250": 21.0857
       },
       "kategoria": "karton"
+    },
+    "Test Papier 2024": {
+      "gramatury": [
+        100,
+        150,
+        200,
+        250
+      ],
+      "ceny": {
+        "100": 5.0,
+        "150": 5.5,
+        "200": 6.0,
+        "250": 6.5
+      },
+      "kategoria": "niepowlekany"
     }
   },
   "uszlachetnienia": {
@@ -1677,56 +1692,64 @@
       "cena_pln": 2500.0,
       "jednostka": "1000 ark",
       "opis": "2.5 PLN/m² | B2: 0.875 PLN | A2: 0.656 PLN | Czas: 45 min",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Lakier UV wybiórczy": {
       "typ": "lakier",
       "cena_pln": 4800.0,
       "jednostka": "1000 ark",
       "opis": "4.8 PLN/m² | B2: 1.68 PLN | A2: 1.26 PLN | Czas: 60 min",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Lakier dyspersyjny": {
       "typ": "lakier",
       "cena_pln": 1200.0,
       "jednostka": "1000 ark",
       "opis": "1.2 PLN/m² | B2: 0.42 PLN | A2: 0.31 PLN | Czas: 30 min",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Folia matowa": {
       "typ": "folia",
       "cena_pln": 3500.0,
       "jednostka": "1000 ark",
       "opis": "3.5 PLN/m² | B2: 1.225 PLN | A2: 0.918 PLN | Czas: 40 min",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Folia błysk": {
       "typ": "folia",
       "cena_pln": 3200.0,
       "jednostka": "1000 ark",
       "opis": "3.2 PLN/m² | B2: 1.12 PLN | A2: 0.839 PLN | Czas: 40 min",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Folia soft-touch": {
       "typ": "folia",
       "cena_pln": 4500.0,
       "jednostka": "1000 ark",
       "opis": "4.5 PLN/m² | B2: 1.575 PLN | A2: 1.18 PLN | Czas: 45 min",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Tłoczenie ślepe": {
       "typ": "wytłoczenie",
       "cena_pln": 8000.0,
       "jednostka": "1000 ark",
       "opis": "8.0 PLN/m² | Czas: 90 min",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Hot-stamping (złoto/srebro)": {
       "typ": "wytłoczenie",
       "cena_pln": 12000.0,
       "jednostka": "1000 ark",
       "opis": "12.0 PLN/m² | Czas: 120 min",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     }
   },
   "obrobka": {
@@ -1734,61 +1757,85 @@
       "cena_pln": 40.0,
       "jednostka": "1000 ark",
       "opis": "Stawka: 80.0 PLN/h | Wydajność: 2000 ark/h | Przygotowanie: 20.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Cięcie formatowe (precyzyjne)": {
       "cena_pln": 66.67,
       "jednostka": "1000 ark",
       "opis": "Stawka: 100.0 PLN/h | Wydajność: 1500 ark/h | Przygotowanie: 30.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Falcowanie (1 złam)": {
       "cena_pln": 30.0,
       "jednostka": "1000 ark",
       "opis": "Stawka: 90.0 PLN/h | Wydajność: 3000 ark/h | Przygotowanie: 25.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Falcowanie (2 złamy)": {
       "cena_pln": 45.0,
       "jednostka": "1000 ark",
       "opis": "Stawka: 90.0 PLN/h | Wydajność: 2000 ark/h | Przygotowanie: 35.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Bigowanie": {
       "cena_pln": 34.0,
       "jednostka": "1000 ark",
       "opis": "Stawka: 85.0 PLN/h | Wydajność: 2500 ark/h | Przygotowanie: 40.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Perforacja": {
       "cena_pln": 37.5,
       "jednostka": "1000 ark",
       "opis": "Stawka: 75.0 PLN/h | Wydajność: 2000 ark/h | Przygotowanie: 30.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Dziurkowanie (2 dziurki)": {
       "cena_pln": 20.0,
       "jednostka": "1000 ark",
       "opis": "Stawka: 70.0 PLN/h | Wydajność: 3500 ark/h | Przygotowanie: 15.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "ARKUSZE_1000"
     },
     "Oklejanie (bindowanie)": {
       "cena_pln": 350.0,
       "jednostka": "1000 szt",
       "opis": "Przygotowanie: 50.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "SZTUKI_1000"
     },
     "Spirala plastikowa": {
       "cena_pln": 1200.0,
       "jednostka": "1000 szt",
       "opis": "Przygotowanie: 30.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "SZTUKI_1000"
     },
     "Bindowanie zeszytowe (zszywanie)": {
       "cena_pln": 40.0,
       "jednostka": "1000 szt",
       "opis": "Stawka: 65.0 PLN/h | Wydajność: 500 szt/h | Przygotowanie: 40.0 PLN",
-      "typ_jednostki": "sztukowa"
+      "typ_jednostki": "sztukowa",
+      "kod_jednostki": "SZTUKI_1000"
+    },
+    "Test Cięcie Premium": {
+      "cena_pln": 0.25,
+      "jednostka": "1000 sztuk",
+      "typ_jednostki": "sztukowa",
+      "opis": "",
+      "kod_jednostki": "SZTUKI_1000"
+    },
+    "Test Cięcie 2024": {
+      "cena_pln": 0.15,
+      "jednostka": "1000 sztuk",
+      "typ_jednostki": "sztukowa",
+      "opis": "",
+      "kod_jednostki": "SZTUKI_1000"
     }
   },
   "kolory_specjalne": {
@@ -1909,7 +1956,7 @@
     "roboczogodzina_druku": 120.0,
     "stawka_nakladu_1000_arkuszy": 55.0,
     "koszt_formy_drukowej": 45.0,
-    "szybkosc_druku_arkuszy_h": 5000
+    "szybkosc_druku_arkuszy_h": 5000.0
   },
   "marza": {
     "Minimalna (10%)": 0.1,
@@ -2016,5 +2063,71 @@
     },
     "koszt_przygotowania_pln": 20.0,
     "opis": "Cięcie papieru z arkuszy B1 (700×1000mm) na format drukarski"
+  },
+  "jednostki": {
+    "ARKUSZE_1000": {
+      "kod": "ARKUSZE_1000",
+      "etykieta": "1000 arkuszy (ark)",
+      "typ_jednostki": "sztukowa",
+      "mnoznik_domyslny": 1000,
+      "slowa_kluczowe": [
+        "1000 ark",
+        "arkusz",
+        "arkusze",
+        "ark"
+      ],
+      "zrodlo_bazowej_ilosci": "arkusze"
+    },
+    "SZTUKI_1000": {
+      "kod": "SZTUKI_1000",
+      "etykieta": "1000 sztuk",
+      "typ_jednostki": "sztukowa",
+      "mnoznik_domyslny": 1000,
+      "slowa_kluczowe": [
+        "1000 szt",
+        "szt",
+        "sztuka",
+        "sztuki"
+      ],
+      "zrodlo_bazowej_ilosci": "naklad"
+    },
+    "SZTUKI_1": {
+      "kod": "SZTUKI_1",
+      "etykieta": "1 sztuka",
+      "typ_jednostki": "sztukowa",
+      "mnoznik_domyslny": 1,
+      "slowa_kluczowe": [
+        "1 szt",
+        "pojedyncza",
+        "sztuka"
+      ],
+      "zrodlo_bazowej_ilosci": "naklad"
+    },
+    "METRY_1": {
+      "kod": "METRY_1",
+      "etykieta": "1 m²",
+      "typ_jednostki": "metrowa",
+      "mnoznik_domyslny": 1.0,
+      "slowa_kluczowe": [
+        "1 m²",
+        "1 m2",
+        "m²",
+        "m2",
+        "metr"
+      ],
+      "zrodlo_bazowej_ilosci": "powierzchnia"
+    },
+    "KILOGRAM_1": {
+      "kod": "KILOGRAM_1",
+      "etykieta": "1 kg",
+      "typ_jednostki": "wagowa",
+      "mnoznik_domyslny": 1.0,
+      "slowa_kluczowe": [
+        "1 kg",
+        "kg",
+        "kilogram"
+      ],
+      "zrodlo_bazowej_ilosci": "waga"
+    }
   }
 }

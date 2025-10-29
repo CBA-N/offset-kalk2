@@ -58,6 +58,55 @@ class KalkulatorUszlachetnieniaTest(unittest.TestCase):
             msg="Koszt uszlachetnień musi być doliczony do sumy kosztów"
         )
 
+    def test_uszlachetnienie_arkuszowe_wg_slownika(self):
+        wynik = self.kalkulator.kalkuluj_uszlachetnienia(
+            ['Lakier UV całościowy'],
+            ilosc_arkuszy=2000,
+            powierzchnia_arkusza=0.5,
+            naklad=0,
+            waga_kg=0
+        )
+
+        self.assertAlmostEqual(wynik['koszt'], 5000.0, places=2)
+
+    def test_uszlachetnienie_metrowe_z_slownika(self):
+        self.kalkulator.uszlachetnienia['Test Metrowy'] = {
+            'cena_pln': 100.0,
+            'jednostka': '1 m²',
+            'typ_jednostki': 'metrowa',
+            'kod_jednostki': 'METRY_1'
+        }
+        self.addCleanup(lambda: self.kalkulator.uszlachetnienia.pop('Test Metrowy', None))
+
+        wynik = self.kalkulator.kalkuluj_uszlachetnienia(
+            ['Test Metrowy'],
+            ilosc_arkuszy=4,
+            powierzchnia_arkusza=0.5,
+            naklad=0,
+            waga_kg=0
+        )
+
+        self.assertAlmostEqual(wynik['koszt'], 200.0, places=2)
+
+    def test_obrobka_wagowa_z_slownika(self):
+        self.kalkulator.obrobka['Test Wagowy'] = {
+            'cena_pln': 50.0,
+            'jednostka': '1 kg',
+            'typ_jednostki': 'wagowa',
+            'kod_jednostki': 'KILOGRAM_1'
+        }
+        self.addCleanup(lambda: self.kalkulator.obrobka.pop('Test Wagowy', None))
+
+        wynik = self.kalkulator.kalkuluj_obrobke(
+            ['Test Wagowy'],
+            naklad=0,
+            powierzchnia_arkusza=0,
+            ilosc_arkuszy=0,
+            waga_kg=20
+        )
+
+        self.assertAlmostEqual(wynik['koszt'], 1000.0, places=2)
+
 
 if __name__ == '__main__':
     unittest.main()

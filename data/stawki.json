@@ -1,0 +1,10 @@
+{
+  "stawka_godzinowa_pln": 450.0,
+  "marza_procent": 20.0,
+  "koszty_operacyjne_procent": 15.0,
+  "roboczogodzina_przygotowania": 85.0,
+  "roboczogodzina_druku": 120.0,
+  "stawka_nakladu_1000_arkuszy": 55.0,
+  "koszt_formy_drukowej": 45.0,
+  "szybkosc_druku_arkuszy_h": 5000
+}
