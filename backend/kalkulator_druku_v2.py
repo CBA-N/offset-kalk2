@@ -470,27 +470,85 @@ class KalkulatorDruku:
             if obrobka in self.obrobka:
                 dane = self.obrobka[obrobka]
                 cena_pln = dane.get('cena_pln', 0)
-                typ_jednostki = dane.get('typ_jednostki', 'sztukowa')
+                typ_jednostki = dane.get('typ_jednostki', 'sztukowa')  # domyślnie sztukowa
+                jednostka_str = dane.get('jednostka', '') or ''
 
-                definicja = self._resolve_jednostka(dane.get('kod_jednostki'), dane.get('jednostka'))
+                jednostka_wartosc = 1.0
+                match = re.search(r'([\d.,]+)', jednostka_str)
+                if match:
+                    try:
+                        jednostka_wartosc = float(match.group(1).replace(',', '.'))
+                    except ValueError:
+                        jednostka_wartosc = 1.0
+                if jednostka_wartosc == 0:
+                    jednostka_wartosc = 1.0
 
-                if definicja:
-                    ilosc_jednostek = self._oblicz_wartosc_jednostki(definicja, kontekst_jednostek)
-                    koszt += cena_pln * ilosc_jednostek
-                elif typ_jednostki:
-                    jednostka_str = dane.get('jednostka', '')
-                    match = re.search(r'([\d.,]+)', jednostka_str)
-                    jednostka_wartosc = float(match.group(1).replace(',', '.')) if match else 1.0
+                jednostka_lower = jednostka_str.lower()
 
-                    if typ_jednostki == 'sztukowa':
-                        koszt += cena_pln * ((kontekst_jednostek['naklad']) / jednostka_wartosc)
-                    elif typ_jednostki == 'metrowa':
-                        koszt += cena_pln * (powierzchnia_calkowita_m2 / jednostka_wartosc)
-                    elif typ_jednostki == 'wagowa':
-                        koszt += cena_pln * (kontekst_jednostek['waga_kg'] / jednostka_wartosc)
-                    else:
-                        koszt += cena_pln
+                # Opcjonalne wsparcie słownika jednostek (jeśli został wstrzyknięty)
+                jednostka_meta = None
+                slownik_jednostek = (
+                    getattr(self, 'slownik_jednostek', None)
+                    or getattr(self, 'jednostki_slownik', None)
+                    or getattr(self, 'jednostki_meta', None)
+                    or getattr(self, 'jednostki', None)
+                )
+                if isinstance(slownik_jednostek, dict):
+                    lookup_keys = [jednostka_str.strip(), jednostka_lower.strip()]
+                    for key in lookup_keys:
+                        if key in slownik_jednostek:
+                            jednostka_meta = slownik_jednostek[key]
+                            break
 
+                bazowa_kategoria = None
+                if isinstance(jednostka_meta, dict):
+                    for meta_key in (
+                        'bazowa_kategoria',
+                        'base_category',
+                        'typ_bazowy',
+                        'rodzaj_bazowy',
+                        'bazowa_ilosc',
+                        'base_quantity',
+                    ):
+                        if meta_key in jednostka_meta:
+                            bazowa_kategoria = jednostka_meta[meta_key]
+                            break
+                    if isinstance(bazowa_kategoria, str):
+                        bazowa_kategoria = bazowa_kategoria.lower()
+
+                ilosc_bazowa = None
+
+                if typ_jednostki == 'metrowa':
+                    ilosc_bazowa = powierzchnia_arkusza * ilosc_arkuszy
+                elif typ_jednostki == 'wagowa':
+                    ilosc_bazowa = waga_kg
+                else:
+                    if bazowa_kategoria:
+                        if bazowa_kategoria in {'arkusz', 'arkusze', 'arkuszowa', 'ark'}:
+                            ilosc_bazowa = ilosc_arkuszy
+                        elif bazowa_kategoria in {'sztuka', 'sztuki', 'naklad', 'egzemplarze', 'sztukowa'}:
+                            ilosc_bazowa = naklad
+                        elif bazowa_kategoria in {'metry', 'metry_biezace', 'mb', 'm2', 'powierzchnia', 'metrowa'}:
+                            ilosc_bazowa = powierzchnia_arkusza * ilosc_arkuszy
+                        elif bazowa_kategoria in {'waga', 'kg', 'wagowa'}:
+                            ilosc_bazowa = waga_kg
+
+                    if ilosc_bazowa is None:
+                        if 'ark' in jednostka_lower:
+                            ilosc_bazowa = ilosc_arkuszy
+                        elif 'mb' in jednostka_lower:
+                            ilosc_bazowa = powierzchnia_arkusza * ilosc_arkuszy
+                        elif 'kg' in jednostka_lower:
+                            ilosc_bazowa = waga_kg
+                        else:
+                            ilosc_bazowa = naklad
+
+                if not ilosc_bazowa:
+                    ilosc_bazowa = naklad
+
+                koszt += cena_pln * (ilosc_bazowa / jednostka_wartosc)
+
+                # Koszt przygotowania jeśli istnieje
                 if 'koszt_przygotowania' in dane:
                     koszt += dane['koszt_przygotowania']
 
@@ -498,7 +556,6 @@ class KalkulatorDruku:
                 if 'czas_min' in dane:
                     czas += dane['czas_min'] / 60
                 else:
-                    import re
                     opis = dane.get('opis', '')
                     match = re.search(r'Czas:\s*(\d+)\s*min', opis)
                     if match:
