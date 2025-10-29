@@ -18,8 +18,13 @@ class SlownikiManager:
             plik_json: Ścieżka do pliku JSON z danymi
         """
         self.plik_json = plik_json
+        self._migracje_wymagaja_zapisu = False
         self.slowniki = self._zaladuj_slowniki()
         self.historia_zmian = []
+
+        # Zapisz zmiany migracyjne (np. dodanie nowych słowników)
+        if self._migracje_wymagaja_zapisu:
+            self.zapisz_slowniki()
         
     def _zaladuj_slowniki(self) -> Dict:
         """Załaduj słowniki z pliku lub utwórz domyślne"""
@@ -29,18 +34,20 @@ class SlownikiManager:
             FORMATY_ARKUSZY, STAWKI_DRUKARNI,
             MARZA_PREDEFINIOWANE, PRIORYTETY_OPTYMALIZACJI
         )
-        
+        from slowniki_danych import KATEGORIE_PAPIERU
+
         # Spróbuj załadować z pliku
         if os.path.exists(self.plik_json):
             try:
                 with open(self.plik_json, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    slowniki = json.load(f)
+                    return self._uzupelnij_braki_slownikow(slowniki, KATEGORIE_PAPIERU)
             except Exception as e:
                 print(f"⚠️  Błąd wczytywania {self.plik_json}: {e}")
                 print("📦 Używam domyślnych wartości")
-        
+
         # Domyślne wartości ze słowników
-        return {
+        domyslne = {
             "papiery": PAPIERY,
             "uszlachetnienia": USZLACHETNIENIA,
             "obrobka": OBROBKA_WYKONCZ,
@@ -50,8 +57,49 @@ class SlownikiManager:
             "formaty": FORMATY_ARKUSZY,
             "stawki": STAWKI_DRUKARNI,
             "marza": MARZA_PREDEFINIOWANE,
-            "priorytety": PRIORYTETY_OPTYMALIZACJI
+            "priorytety": PRIORYTETY_OPTYMALIZACJI,
+            "kategorie_papieru": copy.deepcopy(KATEGORIE_PAPIERU)
         }
+        self._migracje_wymagaja_zapisu = True
+        return domyslne
+
+    def _uzupelnij_braki_slownikow(self, slowniki: Dict, domyslne_kategorie: Dict) -> Dict:
+        """Uzupełnij słowniki o brakujące dane (np. kategorie papieru)."""
+        if slowniki is None:
+            slowniki = {}
+
+        zaktualizowano = False
+
+        # Zapewnij strukturę słownika kategorii papieru
+        kategorie = slowniki.get('kategorie_papieru')
+        if not isinstance(kategorie, dict):
+            slowniki['kategorie_papieru'] = copy.deepcopy(domyslne_kategorie)
+            kategorie = slowniki['kategorie_papieru']
+            zaktualizowano = True
+        else:
+            for klucz, wartosc in list(kategorie.items()):
+                if isinstance(wartosc, str):
+                    kategorie[klucz] = {'nazwa': wartosc, 'opis': ''}
+                    zaktualizowano = True
+                else:
+                    if 'nazwa' not in wartosc or not wartosc['nazwa']:
+                        wartosc['nazwa'] = klucz
+                        zaktualizowano = True
+                    if 'opis' not in wartosc:
+                        wartosc['opis'] = ''
+                        zaktualizowano = True
+
+        # Uzupełnij kategorie na podstawie istniejących papierów
+        for papier in slowniki.get('papiery', {}).values():
+            kategoria = papier.get('kategoria')
+            if kategoria and kategoria not in kategorie:
+                kategorie[kategoria] = {'nazwa': kategoria, 'opis': ''}
+                zaktualizowano = True
+
+        if zaktualizowano:
+            self._migracje_wymagaja_zapisu = True
+
+        return slowniki
     
     def zapisz_slowniki(self) -> bool:
         """Zapisz słowniki do pliku JSON"""
@@ -70,14 +118,115 @@ class SlownikiManager:
     def get_wszystkie(self) -> Dict:
         """Pobierz wszystkie słowniki"""
         return self.slowniki
-    
+
+    def _waliduj_kategorie_papieru(self, kategoria: str):
+        """Sprawdź czy kategoria papieru istnieje"""
+        if not kategoria:
+            raise ValueError("Kategoria papieru jest wymagana")
+
+        kategorie = self.slowniki.get('kategorie_papieru', {})
+        if kategoria not in kategorie:
+            raise ValueError(f"Kategoria papieru '{kategoria}' nie istnieje")
+
+    def get_kategorie_papieru(self) -> Dict:
+        """Pobierz słownik kategorii papieru"""
+        return self.slowniki.get('kategorie_papieru', {})
+
+    def dodaj_kategorie_papieru(self, nazwa: str, opis: str = '') -> Dict:
+        """Dodaj nową kategorię papieru"""
+        nazwa = (nazwa or '').strip()
+        if not nazwa:
+            raise ValueError("Nazwa kategorii jest wymagana")
+
+        opis = (opis or '').strip()
+
+        kategorie = self.slowniki.setdefault('kategorie_papieru', {})
+        if nazwa in kategorie:
+            raise ValueError(f"Kategoria '{nazwa}' już istnieje")
+
+        kategorie[nazwa] = {
+            'nazwa': nazwa,
+            'opis': opis
+        }
+
+        self._zapisz_zmiane('kategorie_papieru', 'dodanie', nazwa)
+        self.zapisz_slowniki()
+
+        return {
+            'nazwa': nazwa,
+            'opis': opis
+        }
+
+    def edytuj_kategorie_papieru(self, stara_nazwa: str, nowa_nazwa: str = None,
+                                 opis: str = None) -> Dict:
+        """Edytuj istniejącą kategorię papieru"""
+        kategorie = self.slowniki.setdefault('kategorie_papieru', {})
+
+        if stara_nazwa not in kategorie:
+            raise ValueError(f"Kategoria '{stara_nazwa}' nie istnieje")
+
+        rekord = kategorie[stara_nazwa]
+        aktualna_nazwa = stara_nazwa
+
+        if nowa_nazwa is not None:
+            nowa_nazwa = nowa_nazwa.strip()
+            if not nowa_nazwa:
+                raise ValueError("Nowa nazwa kategorii jest wymagana")
+            if nowa_nazwa != stara_nazwa and nowa_nazwa in kategorie:
+                raise ValueError(f"Kategoria '{nowa_nazwa}' już istnieje")
+
+            # Zmień klucz w słowniku i zaktualizuj nazwy w papierach
+            kategorie[nowa_nazwa] = rekord
+            del kategorie[stara_nazwa]
+            rekord['nazwa'] = nowa_nazwa
+
+            for papier in self.slowniki.get('papiery', {}).values():
+                if papier.get('kategoria') == stara_nazwa:
+                    papier['kategoria'] = nowa_nazwa
+
+            aktualna_nazwa = nowa_nazwa
+        else:
+            rekord['nazwa'] = rekord.get('nazwa', stara_nazwa)
+
+        if opis is not None:
+            rekord['opis'] = opis.strip()
+
+        self._zapisz_zmiane('kategorie_papieru', 'edycja', aktualna_nazwa)
+        self.zapisz_slowniki()
+
+        return {
+            'nazwa': aktualna_nazwa,
+            'opis': rekord.get('opis', '')
+        }
+
+    def usun_kategorie_papieru(self, nazwa: str) -> bool:
+        """Usuń kategorię papieru"""
+        kategorie = self.slowniki.setdefault('kategorie_papieru', {})
+
+        if nazwa not in kategorie:
+            raise ValueError(f"Kategoria '{nazwa}' nie istnieje")
+
+        # Sprawdź czy kategoria jest przypisana do jakiegokolwiek papieru
+        for papier in self.slowniki.get('papiery', {}).values():
+            if papier.get('kategoria') == nazwa:
+                raise ValueError("Nie można usunąć kategorii przypisanej do papierów")
+
+        del kategorie[nazwa]
+
+        self._zapisz_zmiane('kategorie_papieru', 'usunięcie', nazwa)
+        self.zapisz_slowniki()
+
+        return True
+
     # ==================== PAPIERY ====================
-    
+
     def dodaj_papier(self, nazwa: str, gramatury: List[int], ceny: List[float],
                      kategoria: str = 'niepowlekany') -> Dict:
         """Dodaj nowy rodzaj papieru"""
         if nazwa in self.slowniki['papiery']:
             raise ValueError(f"Papier '{nazwa}' już istnieje")
+
+        self._waliduj_kategorie_papieru(kategoria)
         
         if len(gramatury) != len(ceny):
             raise ValueError("Liczba gramatur musi być równa liczbie cen")
@@ -126,15 +275,16 @@ class SlownikiManager:
                 raise ValueError("Musisz podać ceny dla nowych gramatur")
             if len(gramatury) != len(ceny):
                 raise ValueError("Liczba gramatur musi być równa liczbie cen")
-            
+
             gramatury_sorted = sorted(gramatury)
             ceny_dict = {str(gram): cena for gram, cena in zip(gramatury_sorted, ceny)}
-            
+
             papier['gramatury'] = gramatury_sorted
             papier['ceny'] = ceny_dict
-        
+
         # Aktualizuj kategorię
         if kategoria is not None:
+            self._waliduj_kategorie_papieru(kategoria)
             papier['kategoria'] = kategoria
         
         self._zapisz_zmiane('papiery', 'edycja', stara_nazwa)

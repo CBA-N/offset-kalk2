@@ -1669,6 +1669,21 @@
         "250": 21.0857
       },
       "kategoria": "karton"
+    },
+    "Test Papier 2024": {
+      "gramatury": [
+        100,
+        150,
+        200,
+        250
+      ],
+      "ceny": {
+        "100": 5.0,
+        "150": 5.5,
+        "200": 6.0,
+        "250": 6.5
+      },
+      "kategoria": "niepowlekany"
     }
   },
   "uszlachetnienia": {
@@ -1789,6 +1804,12 @@
       "jednostka": "1000 szt",
       "opis": "Stawka: 65.0 PLN/h | Wydajność: 500 szt/h | Przygotowanie: 40.0 PLN",
       "typ_jednostki": "sztukowa"
+    },
+    "Test Cięcie Premium": {
+      "cena_pln": 0.25,
+      "jednostka": "szt",
+      "typ_jednostki": "sztukowa",
+      "opis": ""
     }
   },
   "kolory_specjalne": {
@@ -1909,7 +1930,7 @@
     "roboczogodzina_druku": 120.0,
     "stawka_nakladu_1000_arkuszy": 55.0,
     "koszt_formy_drukowej": 45.0,
-    "szybkosc_druku_arkuszy_h": 5000
+    "szybkosc_druku_arkuszy_h": 5000.0
   },
   "marza": {
     "Minimalna (10%)": 0.1,
@@ -2016,5 +2037,59 @@
     },
     "koszt_przygotowania_pln": 20.0,
     "opis": "Cięcie papieru z arkuszy B1 (700×1000mm) na format drukarski"
+  },
+  "kategorie_papieru": {
+    "powlekany": {
+      "nazwa": "Powlekany",
+      "opis": "Papiery kredowe z połyskiem lub matowe"
+    },
+    "niepowlekany": {
+      "nazwa": "Niepowlekany",
+      "opis": "Papiery offsetowe i niepowlekane"
+    },
+    "karton": {
+      "nazwa": "Karton",
+      "opis": "Kartony i tektury lite"
+    },
+    "specjalny": {
+      "nazwa": "Specjalny",
+      "opis": "Materiały samoklejące i niestandardowe"
+    },
+    "ekologiczny": {
+      "nazwa": "Ekologiczny",
+      "opis": "Papiery z recyklingu i ekologiczne"
+    },
+    "digital": {
+      "nazwa": "digital",
+      "opis": ""
+    },
+    "samoprzylepny": {
+      "nazwa": "samoprzylepny",
+      "opis": ""
+    },
+    "koperty": {
+      "nazwa": "koperty",
+      "opis": ""
+    },
+    "ozdobny": {
+      "nazwa": "ozdobny",
+      "opis": ""
+    },
+    "pakowy": {
+      "nazwa": "pakowy",
+      "opis": ""
+    },
+    "samokopia": {
+      "nazwa": "samokopia",
+      "opis": ""
+    },
+    "syntetyczny": {
+      "nazwa": "syntetyczny",
+      "opis": ""
+    },
+    "wizytówkowy": {
+      "nazwa": "wizytówkowy",
+      "opis": ""
+    }
   }
 }

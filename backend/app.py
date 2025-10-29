@@ -126,7 +126,25 @@ def manage_slownik(kategoria, operacja):
                 wynik = slowniki_mgr.usun_papier(dane['nazwa'])
             else:
                 return jsonify({"error": "Nieznana operacja"}), 400
-        
+
+        # KATEGORIE PAPIERU
+        elif kategoria == 'kategorie_papieru':
+            if operacja == 'dodaj':
+                wynik = slowniki_mgr.dodaj_kategorie_papieru(
+                    dane['nazwa'],
+                    dane.get('opis', '')
+                )
+            elif operacja == 'edytuj':
+                wynik = slowniki_mgr.edytuj_kategorie_papieru(
+                    dane['stara_nazwa'],
+                    dane.get('nowa_nazwa'),
+                    dane.get('opis')
+                )
+            elif operacja == 'usun':
+                wynik = slowniki_mgr.usun_kategorie_papieru(dane['nazwa'])
+            else:
+                return jsonify({"error": "Nieznana operacja"}), 400
+
         # USZLACHETNIENIA
         elif kategoria == 'uszlachetnienia':
             if operacja == 'dodaj':
@@ -305,45 +323,32 @@ def manage_slownik(kategoria, operacja):
 def get_papiery_kategorie():
     """API: Pobierz papiery pogrupowane według kategorii"""
     papiery = slowniki_mgr.get_slownik('papiery')
-    
-    # Mapowanie kategorii na ładne nazwy
-    kategorie_nazwy = {
-        'powlekany': 'Kreda (powlekane)',
-        'niepowlekany': 'Offset (niepowlekane)',
-        'karton': 'Kartony',
-        'digital': 'Digital',
-        'ekologiczny': 'Ekologiczne',
-        'samoprzylepny': 'Samoprzylepne/Etykietowe',
-        'wizytówkowy': 'Wizytówkowe',
-        'samokopia': 'Samokopia',
-        'metalizowany': 'Metalizowane',
-        'syntetyczny': 'Syntetyczne',
-        'koperty': 'Koperty',
-        'pakowy': 'Pakowe',
-        'ozdobny': 'Ozdobne',
-        'specjalny': 'Specjalne',
-        'inne': 'Inne'
-    }
-    
+    kategorie = slowniki_mgr.get_slownik('kategorie_papieru')
+
     # Grupuj według kategorii
     pogrupowane = {}
     for nazwa, dane in papiery.items():
         kat = dane.get('kategoria', 'inne')
-        kat_nazwa = kategorie_nazwy.get(kat, kat.capitalize())
-        
+        rekord_kategorii = kategorie.get(kat, {}) if isinstance(kategorie, dict) else {}
+        kat_nazwa = rekord_kategorii.get('nazwa') if isinstance(rekord_kategorii, dict) else None
+        if not kat_nazwa:
+            kat_nazwa = kat.capitalize()
+
         if kat_nazwa not in pogrupowane:
             pogrupowane[kat_nazwa] = []
-        
+
         pogrupowane[kat_nazwa].append({
             'nazwa': nazwa,
             'gramatury': dane['gramatury'],
             'kategoria_id': kat
         })
-    
+
     # Sortuj kategorie alfabetycznie
+    posortowane = sorted(pogrupowane.items(), key=lambda item: item[0].lower())
+
     return jsonify({
-        'kategorie': sorted(pogrupowane.keys()),
-        'papiery': pogrupowane
+        'kategorie': [nazwa for nazwa, _ in posortowane],
+        'papiery': {nazwa: lista for nazwa, lista in posortowane}
     })
 
 
