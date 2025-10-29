@@ -27,6 +27,11 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
+            <button class="nav-link" id="jednostki-tab" data-bs-toggle="tab" data-bs-target="#jednostki" type="button">
+                <i class="fas fa-balance-scale"></i> Jednostki
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
             <button class="nav-link" id="kolory-tab" data-bs-toggle="tab" data-bs-target="#kolory" type="button">
                 <i class="fas fa-palette"></i> Kolory Specjalne
             </button>
@@ -101,6 +106,23 @@
                 </div>
                 <div class="card-body">
                     <div id="listaObrobki"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Jednostki -->
+        <div class="tab-pane fade" id="jednostki" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Słownik jednostek kalkulacyjnych</span>
+                    <button class="btn btn-success btn-sm" onclick="pokazFormularzJednostki()">
+                        <i class="fas fa-plus"></i> Dodaj jednostkę
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3"><i class="fas fa-info-circle"></i> Jednostki definiują typ (sztukowy, metrowy, wagowy)
+                        oraz domyślny mnożnik wykorzystywany przy kalkulacji kosztów uszlachetnień i obróbki.</p>
+                    <div id="listaJednostek"></div>
                 </div>
             </div>
         </div>
@@ -279,6 +301,7 @@ function zaladujSlowniki() {
 
 function renderujWszystko() {
     renderujPapiery();
+    renderujJednostki();
     renderujUszlachetnienia();
     renderujObrobke();
     renderujKolory();
@@ -435,10 +458,193 @@ function edytujPapier(nazwa) {
 
 function usunPapier(nazwa) {
     if (!confirm(`Czy na pewno usunąć papier: ${nazwa}?`)) return;
-    
+
     wykonajOperacje('papiery', 'usun', { nazwa: nazwa }, () => {
         zaladujSlowniki();
         pokazSukces(`Papier "${nazwa}" usunięty`);
+    });
+}
+
+// ==================== JEDNOSTKI ====================
+
+function getPosortowaneJednostki() {
+    const jednostki = slowniki.jednostki || {};
+    return Object.entries(jednostki).sort((a, b) => {
+        const etA = a[1].etykieta || a[0];
+        const etB = b[1].etykieta || b[0];
+        return etA.localeCompare(etB, 'pl');
+    });
+}
+
+function renderujJednostki() {
+    const entries = getPosortowaneJednostki();
+
+    let rows = entries.map(([kod, dane]) => {
+        const slowa = (dane.slowa_kluczowe || []).join(', ');
+        const slowaHtml = slowa ? slowa : '<span class="text-muted">Brak</span>';
+        const zrodlo = dane.zrodlo_bazowej_ilosci || '<span class="text-muted">domyślne</span>';
+        return `
+            <tr>
+                <td>${kod}</td>
+                <td>
+                    <div class="fw-semibold">${dane.etykieta || '-'}</div>
+                    <div class="text-muted small">Typ: ${dane.typ_jednostki || '-'}</div>
+                </td>
+                <td>${dane.mnoznik_domyslny}</td>
+                <td>${zrodlo}</td>
+                <td>${slowaHtml}</td>
+                <td class="text-end">
+                    <div class="btn-group" role="group" aria-label="Akcje dla ${kod}">
+                        <button type="button" class="btn btn-sm btn-warning" onclick='edytujJednostke(${JSON.stringify(kod)})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick='usunJednostke(${JSON.stringify(kod)})'>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    if (!rows) {
+        rows = '<tr><td colspan="6" class="text-center text-muted">Brak zdefiniowanych jednostek</td></tr>';
+    }
+
+    const html = `
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Kod</th>
+                        <th>Etykieta i typ</th>
+                        <th>Mnożnik</th>
+                        <th>Bazowa ilość</th>
+                        <th>Słowa kluczowe</th>
+                        <th class="text-end">Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+
+    $('#listaJednostek').html(html);
+}
+
+function pokazFormularzJednostki(kod = null) {
+    const jednostki = slowniki.jednostki || {};
+    const dane = kod ? jednostki[kod] : null;
+    const slowa = dane ? (dane.slowa_kluczowe || []).join(', ') : '';
+    const typ = dane ? dane.typ_jednostki : 'sztukowa';
+    const zrodlo = dane ? (dane.zrodlo_bazowej_ilosci || '') : '';
+
+    const html = `
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Kod jednostki</label>
+                <input type="text" class="form-control" id="form_kod_jednostki" value="${kod || ''}" ${kod ? 'readonly' : ''}>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Etykieta</label>
+                <input type="text" class="form-control" id="form_etykieta_jednostki" value="${dane ? dane.etykieta : ''}">
+            </div>
+        </div>
+        <div class="row g-3 mt-1">
+            <div class="col-md-4">
+                <label class="form-label">Typ jednostki</label>
+                <select class="form-select" id="form_typ_jednostki_slownik">
+                    <option value="sztukowa" ${typ === 'sztukowa' ? 'selected' : ''}>Sztukowa</option>
+                    <option value="metrowa" ${typ === 'metrowa' ? 'selected' : ''}>Metrowa</option>
+                    <option value="wagowa" ${typ === 'wagowa' ? 'selected' : ''}>Wagowa</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Mnożnik domyślny</label>
+                <input type="number" class="form-control" id="form_mnoznik_domyslny" step="0.01" min="0.0001" value="${dane ? dane.mnoznik_domyslny : 1}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Bazowa ilość</label>
+                <select class="form-select" id="form_zrodlo_bazowe">
+                    <option value="" ${!zrodlo ? 'selected' : ''}>(domyślna)</option>
+                    <option value="naklad" ${zrodlo === 'naklad' ? 'selected' : ''}>Nakład (sztuki)</option>
+                    <option value="arkusze" ${zrodlo === 'arkusze' ? 'selected' : ''}>Arkusze</option>
+                    <option value="powierzchnia" ${zrodlo === 'powierzchnia' ? 'selected' : ''}>Powierzchnia [m²]</option>
+                    <option value="waga" ${zrodlo === 'waga' ? 'selected' : ''}>Waga [kg]</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-3">
+            <label class="form-label">Słowa kluczowe (oddzielone przecinkami)</label>
+            <input type="text" class="form-control" id="form_slowa_kluczowe" value="${slowa}">
+            <div class="form-text">Używane przy automatycznym mapowaniu istniejących rekordów.</div>
+        </div>
+    `;
+
+    $('#formularzTytul').text(kod ? `Edytuj jednostkę: ${kod}` : 'Dodaj jednostkę');
+    $('#formularzTresc').html(html);
+    $('#zapiszFormularz').off('click').on('click', () => zapiszJednostke(kod));
+    modal.show();
+}
+
+function zapiszJednostke(staryKod) {
+    const kod = $('#form_kod_jednostki').val().trim();
+    const etykieta = $('#form_etykieta_jednostki').val().trim();
+    const typ = $('#form_typ_jednostki_slownik').val();
+    const mnoznik = parseFloat($('#form_mnoznik_domyslny').val());
+    const zrodlo = $('#form_zrodlo_bazowe').val() || null;
+    const slowa = $('#form_slowa_kluczowe').val()
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+    if (!kod || !etykieta || !typ || isNaN(mnoznik)) {
+        pokazBlad('Kod, etykieta, typ i mnożnik są wymagane');
+        return;
+    }
+
+    if (mnoznik <= 0) {
+        pokazBlad('Mnożnik musi być dodatni');
+        return;
+    }
+
+    const dane = {
+        kod,
+        etykieta,
+        typ_jednostki: typ,
+        mnoznik_domyslny: mnoznik,
+        slowa_kluczowe: slowa,
+        zrodlo_bazowej_ilosci: zrodlo
+    };
+
+    let operacja;
+    if (staryKod) {
+        operacja = 'edytuj';
+        dane.stary_kod = staryKod;
+        if (staryKod !== kod) {
+            dane.nowy_kod = kod;
+        }
+    } else {
+        operacja = 'dodaj';
+    }
+
+    wykonajOperacje('jednostki', operacja, dane, () => {
+        modal.hide();
+        zaladujSlowniki();
+        pokazSukces(`Jednostka "${kod}" ${staryKod ? 'zaktualizowana' : 'dodana'}`);
+    });
+}
+
+function edytujJednostke(kod) {
+    pokazFormularzJednostki(kod);
+}
+
+function usunJednostke(kod) {
+    if (!confirm(`Czy na pewno usunąć jednostkę: ${kod}?`)) return;
+
+    wykonajOperacje('jednostki', 'usun', { kod }, () => {
+        zaladujSlowniki();
+        pokazSukces(`Jednostka "${kod}" usunięta`);
     });
 }
 
@@ -449,12 +655,15 @@ function renderujUszlachetnienia() {
 
     let rows = entries.map(([nazwa, dane]) => {
         const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak</span>';
+        const jednostka = dane.jednostka || '1000 ark';
+        const typJednostki = dane.typ_jednostki || '-';
+        const kodJednostki = dane.kod_jednostki ? `<br><small class="text-muted">${dane.kod_jednostki}</small>` : '';
         return `
             <tr>
                 <td>${nazwa}</td>
                 <td>${dane.typ || '-'}</td>
-                <td>${dane.cena_pln} PLN/${dane.jednostka || '1000 ark'}</td>
-                <td>${dane.typ_jednostki || '-'}</td>
+                <td>${dane.cena_pln} PLN/${jednostka}</td>
+                <td>${typJednostki}${kodJednostki}</td>
                 <td>${opis}</td>
                 <td class="text-end">
                     <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
@@ -499,7 +708,17 @@ function renderujUszlachetnienia() {
 
 function pokazFormularzUszlachetnienia(nazwa = null) {
     let dane = nazwa ? slowniki.uszlachetnienia[nazwa] : null;
-    
+    const jednostkiLista = getPosortowaneJednostki();
+    const selectedKod = dane ? (dane.kod_jednostki || '') : '';
+    const jednostkaOpis = dane ? (dane.jednostka || '1000 ark') : '1000 ark';
+    const typJednostki = dane ? (dane.typ_jednostki || 'sztukowa') : 'sztukowa';
+
+    const opcjeJednostek = [
+        `<option value="" ${selectedKod ? '' : 'selected'}>Własny opis jednostki</option>`,
+        ...jednostkiLista.map(([kod, def]) =>
+            `<option value="${kod}" ${selectedKod === kod ? 'selected' : ''}>${def.etykieta} (${def.typ_jednostki})</option>`)
+    ].join('');
+
     let html = `
         <div class="mb-3">
             <label class="form-label">Nazwa uszlachetnienia</label>
@@ -516,21 +735,22 @@ function pokazFormularzUszlachetnienia(nazwa = null) {
         </div>
         <div class="mb-3">
             <label class="form-label">Cena (PLN)</label>
-            <input type="number" step="0.01" class="form-control" id="form_cena_pln" 
+            <input type="number" step="0.01" class="form-control" id="form_cena_pln"
                    value="${dane ? dane.cena_pln : ''}">
         </div>
         <div class="mb-3">
             <label class="form-label">Jednostka</label>
-            <input type="text" class="form-control" id="form_jednostka" 
-                   value="${dane ? dane.jednostka : '1000 ark'}">
-            <small class="text-muted">Np. "1000 ark", "1 m²", "1 kg"</small>
+            <select class="form-select" id="form_kod_jednostki_uszl">${opcjeJednostek}</select>
+            <input type="text" class="form-control mt-2 ${selectedKod ? 'd-none' : ''}" id="form_jednostka_uszl"
+                   data-manual="${jednostkaOpis}" value="${jednostkaOpis}">
+            <div class="form-text" id="info_jednostka_uszl">&nbsp;</div>
         </div>
         <div class="mb-3">
             <label class="form-label">Typ jednostki</label>
             <select class="form-control" id="form_typ_jednostki">
-                <option value="sztukowa" ${dane && dane.typ_jednostki === 'sztukowa' ? 'selected' : ''}>Sztukowa (za X sztuk/arkuszy)</option>
-                <option value="metrowa" ${dane && dane.typ_jednostki === 'metrowa' ? 'selected' : ''}>Metrowa (za X m²)</option>
-                <option value="wagowa" ${dane && dane.typ_jednostki === 'wagowa' ? 'selected' : ''}>Wagowa (za X kg)</option>
+                <option value="sztukowa" ${typJednostki === 'sztukowa' ? 'selected' : ''}>Sztukowa (za X sztuk/arkuszy)</option>
+                <option value="metrowa" ${typJednostki === 'metrowa' ? 'selected' : ''}>Metrowa (za X m²)</option>
+                <option value="wagowa" ${typJednostki === 'wagowa' ? 'selected' : ''}>Wagowa (za X kg)</option>
             </select>
         </div>
         <div class="mb-3">
@@ -538,10 +758,11 @@ function pokazFormularzUszlachetnienia(nazwa = null) {
             <textarea class="form-control" id="form_opis" rows="2">${dane ? dane.opis : ''}</textarea>
         </div>
     `;
-    
+
     $('#formularzTytul').text(nazwa ? `Edytuj: ${nazwa}` : 'Dodaj uszlachetnienie');
     $('#formularzTresc').html(html);
-    
+
+    ustawKontrolkeJednostki('#form_kod_jednostki_uszl', '#form_typ_jednostki', '#form_jednostka_uszl', '#info_jednostka_uszl');
     $('#zapiszFormularz').off('click').on('click', () => zapiszUszlachetnienie(nazwa));
     modal.show();
 }
@@ -550,18 +771,27 @@ function zapiszUszlachetnienie(staraNazwa) {
     let nazwa = $('#form_nazwa').val().trim();
     let typ = $('#form_typ').val();
     let cena_pln = parseFloat($('#form_cena_pln').val());
-    let jednostka = $('#form_jednostka').val().trim();
+    let kod_jednostki = $('#form_kod_jednostki_uszl').val();
+    let jednostka = $('#form_jednostka_uszl').length ? $('#form_jednostka_uszl').val().trim() : '';
     let typ_jednostki = $('#form_typ_jednostki').val();
+    const definicja = getDefinicjaJednostki(kod_jednostki);
+    if (definicja) {
+        jednostka = definicja.etykieta;
+        typ_jednostki = definicja.typ_jednostki;
+    }
+    if (!kod_jednostki) {
+        kod_jednostki = null;
+    }
     let opis = $('#form_opis').val().trim();
-    
+
     if (!nazwa || !typ || isNaN(cena_pln)) {
         pokazBlad('Nazwa, typ i cena są wymagane');
         return;
     }
     
     let operacja = staraNazwa ? 'edytuj' : 'dodaj';
-    let dane = { nazwa, typ, cena_pln, jednostka, typ_jednostki, opis };
-    
+    let dane = { nazwa, typ, cena_pln, jednostka, typ_jednostki, opis, kod_jednostki };
+
     if (staraNazwa) {
         dane.stara_nazwa = staraNazwa;
         if (staraNazwa !== nazwa) dane.nowa_nazwa = nazwa;
@@ -594,12 +824,15 @@ function renderujObrobke() {
 
     let rows = entries.map(([nazwa, dane]) => {
         const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak</span>';
+        const jednostka = dane.jednostka || '1000 szt';
+        const typJednostki = dane.typ_jednostki || '-';
+        const kodJednostki = dane.kod_jednostki ? `<br><small class="text-muted">${dane.kod_jednostki}</small>` : '';
         return `
             <tr>
                 <td>${nazwa}</td>
-                <td>${dane.jednostka || '1000 szt'}</td>
+                <td>${jednostka}</td>
                 <td>${dane.cena_pln} PLN</td>
-                <td>${dane.typ_jednostki || '-'}</td>
+                <td>${typJednostki}${kodJednostki}</td>
                 <td>${opis}</td>
                 <td class="text-end">
                     <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
@@ -644,7 +877,17 @@ function renderujObrobke() {
 
 function pokazFormularzObrobki(nazwa = null) {
     let dane = nazwa ? slowniki.obrobka[nazwa] : null;
-    
+    const jednostkiLista = getPosortowaneJednostki();
+    const selectedKod = dane ? (dane.kod_jednostki || '') : '';
+    const jednostkaOpis = dane ? (dane.jednostka || '1000 szt') : '1000 szt';
+    const typJednostki = dane ? (dane.typ_jednostki || 'sztukowa') : 'sztukowa';
+
+    const opcjeJednostek = [
+        `<option value="" ${selectedKod ? '' : 'selected'}>Własny opis jednostki</option>`,
+        ...jednostkiLista.map(([kod, def]) =>
+            `<option value="${kod}" ${selectedKod === kod ? 'selected' : ''}>${def.etykieta} (${def.typ_jednostki})</option>`)
+    ].join('');
+
     let html = `
         <div class="mb-3">
             <label class="form-label">Nazwa operacji</label>
@@ -652,32 +895,34 @@ function pokazFormularzObrobki(nazwa = null) {
         </div>
         <div class="mb-3">
             <label class="form-label">Cena (PLN)</label>
-            <input type="number" step="0.01" class="form-control" id="form_cena_pln" 
+            <input type="number" step="0.01" class="form-control" id="form_cena_pln"
                    value="${dane ? dane.cena_pln : ''}">
         </div>
         <div class="mb-3">
             <label class="form-label">Jednostka</label>
-            <input type="text" class="form-control" id="form_jednostka" 
-                   value="${dane ? dane.jednostka : '1000 szt'}">
-            <small class="text-muted">Np. "1000 szt", "1 m²", "100 mb"</small>
+            <select class="form-select" id="form_kod_jednostki_obr">${opcjeJednostek}</select>
+            <input type="text" class="form-control mt-2 ${selectedKod ? 'd-none' : ''}" id="form_jednostka_obr"
+                   data-manual="${jednostkaOpis}" value="${jednostkaOpis}">
+            <div class="form-text" id="info_jednostka_obr">&nbsp;</div>
         </div>
         <div class="mb-3">
             <label class="form-label">Typ jednostki</label>
-            <select class="form-control" id="form_typ_jednostki">
-                <option value="sztukowa" ${dane && dane.typ_jednostki === 'sztukowa' ? 'selected' : ''}>Sztukowa (za X sztuk)</option>
-                <option value="metrowa" ${dane && dane.typ_jednostki === 'metrowa' ? 'selected' : ''}>Metrowa (za X m²/mb)</option>
-                <option value="wagowa" ${dane && dane.typ_jednostki === 'wagowa' ? 'selected' : ''}>Wagowa (za X kg)</option>
+            <select class="form-control" id="form_typ_jednostki_obr">
+                <option value="sztukowa" ${typJednostki === 'sztukowa' ? 'selected' : ''}>Sztukowa (za X sztuk)</option>
+                <option value="metrowa" ${typJednostki === 'metrowa' ? 'selected' : ''}>Metrowa (za X m²/mb)</option>
+                <option value="wagowa" ${typJednostki === 'wagowa' ? 'selected' : ''}>Wagowa (za X kg)</option>
             </select>
         </div>
         <div class="mb-3">
             <label class="form-label">Opis (opcjonalnie)</label>
-            <textarea class="form-control" id="form-opis" rows="2">${dane ? dane.opis : ''}</textarea>
+            <textarea class="form-control" id="form_opis_obr" rows="2">${dane ? dane.opis : ''}</textarea>
         </div>
     `;
-    
+
     $('#formularzTytul').text(nazwa ? `Edytuj: ${nazwa}` : 'Dodaj obróbkę');
     $('#formularzTresc').html(html);
-    
+
+    ustawKontrolkeJednostki('#form_kod_jednostki_obr', '#form_typ_jednostki_obr', '#form_jednostka_obr', '#info_jednostka_obr');
     $('#zapiszFormularz').off('click').on('click', () => zapiszObrobke(nazwa));
     modal.show();
 }
@@ -685,18 +930,27 @@ function pokazFormularzObrobki(nazwa = null) {
 function zapiszObrobke(staraNazwa) {
     let nazwa = $('#form_nazwa').val().trim();
     let cena_pln = parseFloat($('#form_cena_pln').val());
-    let jednostka = $('#form_jednostka').val().trim();
-    let typ_jednostki = $('#form_typ_jednostki').val();
-    let opis = $('#form_opis').val().trim();
-    
+    let kod_jednostki = $('#form_kod_jednostki_obr').val();
+    let jednostka = $('#form_jednostka_obr').length ? $('#form_jednostka_obr').val().trim() : '';
+    let typ_jednostki = $('#form_typ_jednostki_obr').val();
+    let opis = $('#form_opis_obr').val().trim();
+    const definicja = getDefinicjaJednostki(kod_jednostki);
+    if (definicja) {
+        jednostka = definicja.etykieta;
+        typ_jednostki = definicja.typ_jednostki;
+    }
+    if (!kod_jednostki) {
+        kod_jednostki = null;
+    }
+
     if (!nazwa || isNaN(cena_pln)) {
         pokazBlad('Nazwa i cena są wymagane');
         return;
     }
-    
+
     let operacja = staraNazwa ? 'edytuj' : 'dodaj';
-    let dane = { nazwa, cena_pln, jednostka, typ_jednostki, opis };
-    
+    let dane = { nazwa, cena_pln, jednostka, typ_jednostki, opis, kod_jednostki };
+
     if (staraNazwa) {
         dane.stara_nazwa = staraNazwa;
         if (staraNazwa !== nazwa) dane.nowa_nazwa = nazwa;
@@ -1339,6 +1593,56 @@ function zapiszStawki() {
     }).fail(function(xhr) {
         pokazBlad('Błąd zapisywania stawek: ' + xhr.responseText);
     });
+}
+
+function getDefinicjaJednostki(kod) {
+    if (!kod) return null;
+    const jednostki = slowniki.jednostki || {};
+    return jednostki[kod] || null;
+}
+
+function ustawKontrolkeJednostki(selectSelector, typSelector, inputSelector, infoSelector) {
+    const $select = $(selectSelector);
+    const $typ = $(typSelector);
+    const $input = $(inputSelector);
+    const $info = $(infoSelector);
+
+    function aktualizuj() {
+        const kod = $select.val();
+        const definicja = getDefinicjaJednostki(kod);
+
+        if (definicja) {
+            if ($input && $input.length) {
+                if (typeof $input.data('manual') === 'undefined') {
+                    $input.data('manual', $input.val());
+                }
+                $input.val(definicja.etykieta).prop('disabled', true).addClass('d-none');
+            }
+            if ($typ && $typ.length) {
+                $typ.val(definicja.typ_jednostki).prop('disabled', true);
+            }
+            if ($info && $info.length) {
+                $info.text(`Typ: ${definicja.typ_jednostki}, mnożnik: ${definicja.mnoznik_domyslny}`);
+            }
+        } else {
+            if ($input && $input.length) {
+                const manual = $input.data('manual');
+                if (typeof manual !== 'undefined') {
+                    $input.val(manual);
+                }
+                $input.prop('disabled', false).removeClass('d-none');
+            }
+            if ($typ && $typ.length) {
+                $typ.prop('disabled', false);
+            }
+            if ($info && $info.length) {
+                $info.text('Wprowadź opis jednostki i wybierz typ ręcznie.');
+            }
+        }
+    }
+
+    $select.off('change').on('change', aktualizuj);
+    aktualizuj();
 }
 
 // ==================== HELPER FUNCTIONS ====================

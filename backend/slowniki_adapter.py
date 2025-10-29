@@ -31,6 +31,7 @@ def adapter_nowy_do_starego(slowniki_nowe: dict) -> dict:
         'stawki': slowniki_nowe.get('stawki', {}),
         'marza': slowniki_nowe.get('marza', {}),
         'priorytety': slowniki_nowe.get('priorytety', {}),
+        'jednostki': slowniki_nowe.get('jednostki', {}),
     }
     
     # USZLACHETNIENIA: zachowaj ceny jednostkowe oraz stare pola pomocnicze
@@ -59,6 +60,7 @@ def adapter_nowy_do_starego(slowniki_nowe: dict) -> dict:
                 'cena_pln': dane['cena_pln'],
                 'jednostka': dane.get('jednostka', '1000 ark'),
                 'typ_jednostki': dane.get('typ_jednostki', 'sztukowa'),
+                'kod_jednostki': dane.get('kod_jednostki'),
                 'opis': dane.get('opis', '')
             }
 
@@ -87,6 +89,8 @@ def adapter_nowy_do_starego(slowniki_nowe: dict) -> dict:
                 'jednostka': 'arkusz',
                 'typ': 'obrobka'
             }
+            if dane.get('kod_jednostki'):
+                obrobka_stara[nazwa]['kod_jednostki'] = dane['kod_jednostki']
     slowniki_stare['obrobka'] = obrobka_stara
     
     # KOLORY SPECJALNE: cena_pln → koszt_za_kolor
@@ -147,6 +151,7 @@ def wstrzyknij_slowniki_do_kalkulatora(kalkulator, slowniki_mgr):
     kalkulator.stawki = slowniki_stare['stawki']
     kalkulator.priorytety = slowniki_stare['priorytety']
     kalkulator.marza = slowniki_stare.get('marza', {})
+    kalkulator.jednostki = slowniki_nowe.get('jednostki', {})
     kalkulator.ciecie_papieru = slowniki_nowe.get('ciecie_papieru', {})  # Nowe: konfiguracja cięcia
     
     return kalkulator

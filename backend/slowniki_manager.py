@@ -4,7 +4,7 @@ Menedżer słowników - zarządzanie danymi, walidacja, zapis do pliku
 
 import json
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 import copy
 
@@ -19,28 +19,28 @@ class SlownikiManager:
         """
         self.plik_json = plik_json
         self.slowniki = self._zaladuj_slowniki()
+        self._mapuj_jednostki_na_kody()
         self.historia_zmian = []
         
     def _zaladuj_slowniki(self) -> Dict:
         """Załaduj słowniki z pliku lub utwórz domyślne"""
         from slowniki_danych import (
-            PAPIERY, USZLACHETNIENIA, OBROBKA_WYKONCZ,
-            KOLORY_SPECJALNE, PAKOWANIE, TRANSPORT,
-            FORMATY_ARKUSZY, STAWKI_DRUKARNI,
-            MARZA_PREDEFINIOWANE, PRIORYTETY_OPTYMALIZACJI
+            PAPIERY,
+            USZLACHETNIENIA,
+            OBROBKA_WYKONCZ,
+            KOLORY_SPECJALNE,
+            PAKOWANIE,
+            TRANSPORT,
+            FORMATY_ARKUSZY,
+            STAWKI_DRUKARNI,
+            MARZA_PREDEFINIOWANE,
+            PRIORYTETY_OPTYMALIZACJI,
+            RODZAJE_PRAC,
+            CIECIE_PAPIERU,
+            JEDNOSTKI,
         )
-        
-        # Spróbuj załadować z pliku
-        if os.path.exists(self.plik_json):
-            try:
-                with open(self.plik_json, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except Exception as e:
-                print(f"⚠️  Błąd wczytywania {self.plik_json}: {e}")
-                print("📦 Używam domyślnych wartości")
-        
-        # Domyślne wartości ze słowników
-        return {
+
+        defaults = {
             "papiery": PAPIERY,
             "uszlachetnienia": USZLACHETNIENIA,
             "obrobka": OBROBKA_WYKONCZ,
@@ -50,8 +50,24 @@ class SlownikiManager:
             "formaty": FORMATY_ARKUSZY,
             "stawki": STAWKI_DRUKARNI,
             "marza": MARZA_PREDEFINIOWANE,
-            "priorytety": PRIORYTETY_OPTYMALIZACJI
+            "priorytety": PRIORYTETY_OPTYMALIZACJI,
+            "rodzaje_prac": RODZAJE_PRAC,
+            "ciecie_papieru": CIECIE_PAPIERU,
+            "jednostki": JEDNOSTKI,
         }
+
+        # Spróbuj załadować z pliku
+        if os.path.exists(self.plik_json):
+            try:
+                with open(self.plik_json, 'r', encoding='utf-8') as f:
+                    dane = json.load(f)
+                    return self._uzupelnij_domyslne_slowniki(dane, defaults)
+            except Exception as e:
+                print(f"⚠️  Błąd wczytywania {self.plik_json}: {e}")
+                print("📦 Używam domyślnych wartości")
+
+        # Domyślne wartości ze słowników
+        return {klucz: copy.deepcopy(wartosc) for klucz, wartosc in defaults.items()}
     
     def zapisz_slowniki(self) -> bool:
         """Zapisz słowniki do pliku JSON"""
@@ -70,6 +86,206 @@ class SlownikiManager:
     def get_wszystkie(self) -> Dict:
         """Pobierz wszystkie słowniki"""
         return self.slowniki
+
+    # ==================== JEDNOSTKI ====================
+
+    def get_jednostki(self) -> Dict[str, Any]:
+        return self.slowniki.get('jednostki', {})
+
+    def dodaj_jednostke(self,
+                        kod: str,
+                        etykieta: str,
+                        typ_jednostki: str,
+                        mnoznik_domyslny: float,
+                        slowa_kluczowe: Optional[List[str]] = None,
+                        zrodlo_bazowej_ilosci: Optional[str] = None) -> Dict[str, Any]:
+        if not kod or not etykieta or not typ_jednostki:
+            raise ValueError("Kod, etykieta i typ jednostki są wymagane")
+
+        kod_norm = kod.strip().upper()
+        jednostki = self.slowniki.setdefault('jednostki', {})
+        if kod_norm in jednostki:
+            raise ValueError(f"Jednostka '{kod_norm}' już istnieje")
+
+        typ_jednostki = typ_jednostki.strip()
+        if typ_jednostki not in {'sztukowa', 'metrowa', 'wagowa'}:
+            raise ValueError("Nieprawidłowy typ jednostki")
+
+        if mnoznik_domyslny is None or float(mnoznik_domyslny) <= 0:
+            raise ValueError("Mnożnik jednostki musi być dodatni")
+
+        slowa = [s.strip().lower() for s in (slowa_kluczowe or []) if s.strip()]
+
+        definicja = {
+            'kod': kod_norm,
+            'etykieta': etykieta.strip(),
+            'typ_jednostki': typ_jednostki,
+            'mnoznik_domyslny': float(mnoznik_domyslny),
+            'slowa_kluczowe': slowa,
+        }
+
+        if zrodlo_bazowej_ilosci:
+            definicja['zrodlo_bazowej_ilosci'] = zrodlo_bazowej_ilosci
+        else:
+            domyslne_zrodlo = {
+                'sztukowa': 'naklad',
+                'metrowa': 'powierzchnia',
+                'wagowa': 'waga'
+            }.get(typ_jednostki)
+            if domyslne_zrodlo:
+                definicja['zrodlo_bazowej_ilosci'] = domyslne_zrodlo
+
+        jednostki[kod_norm] = definicja
+        self._mapuj_jednostki_na_kody()
+        self._zapisz_zmiane('jednostki', 'dodanie', kod_norm)
+        self.zapisz_slowniki()
+
+        return definicja
+
+    def edytuj_jednostke(self,
+                         stary_kod: str,
+                         nowy_kod: Optional[str] = None,
+                         etykieta: Optional[str] = None,
+                         typ_jednostki: Optional[str] = None,
+                         mnoznik_domyslny: Optional[float] = None,
+                         slowa_kluczowe: Optional[List[str]] = None,
+                         zrodlo_bazowej_ilosci: Optional[str] = None) -> Dict[str, Any]:
+        jednostki = self.slowniki.setdefault('jednostki', {})
+        stary_kod = stary_kod.strip().upper()
+        if stary_kod not in jednostki:
+            raise ValueError(f"Jednostka '{stary_kod}' nie istnieje")
+
+        jednostka = jednostki[stary_kod]
+        docelowy_kod = stary_kod
+
+        if nowy_kod and nowy_kod.strip().upper() != stary_kod:
+            nowy_kod_norm = nowy_kod.strip().upper()
+            if nowy_kod_norm in jednostki:
+                raise ValueError(f"Jednostka '{nowy_kod_norm}' już istnieje")
+            jednostki[nowy_kod_norm] = jednostka
+            del jednostki[stary_kod]
+            jednostka['kod'] = nowy_kod_norm
+            for kategoria in ('uszlachetnienia', 'obrobka'):
+                for dane in self.slowniki.get(kategoria, {}).values():
+                    if dane.get('kod_jednostki') == stary_kod:
+                        dane['kod_jednostki'] = nowy_kod_norm
+            docelowy_kod = nowy_kod_norm
+
+        if etykieta is not None:
+            jednostka['etykieta'] = etykieta.strip()
+
+        if typ_jednostki is not None:
+            typ_jednostki = typ_jednostki.strip()
+            if typ_jednostki not in {'sztukowa', 'metrowa', 'wagowa'}:
+                raise ValueError("Nieprawidłowy typ jednostki")
+            jednostka['typ_jednostki'] = typ_jednostki
+
+        if mnoznik_domyslny is not None:
+            if float(mnoznik_domyslny) <= 0:
+                raise ValueError("Mnożnik jednostki musi być dodatni")
+            jednostka['mnoznik_domyslny'] = float(mnoznik_domyslny)
+
+        if slowa_kluczowe is not None:
+            jednostka['slowa_kluczowe'] = [s.strip().lower() for s in slowa_kluczowe if s.strip()]
+
+        if zrodlo_bazowej_ilosci is not None:
+            jednostka['zrodlo_bazowej_ilosci'] = zrodlo_bazowej_ilosci
+        elif typ_jednostki is not None:
+            domyslne_zrodlo = {
+                'sztukowa': 'naklad',
+                'metrowa': 'powierzchnia',
+                'wagowa': 'waga'
+            }[jednostka['typ_jednostki']]
+            jednostka['zrodlo_bazowej_ilosci'] = domyslne_zrodlo
+
+        self._mapuj_jednostki_na_kody()
+        self._zapisz_zmiane('jednostki', 'edycja', docelowy_kod)
+        self.zapisz_slowniki()
+
+        return jednostka
+
+    def usun_jednostke(self, kod: str) -> bool:
+        jednostki = self.slowniki.setdefault('jednostki', {})
+        kod = kod.strip().upper()
+        if kod not in jednostki:
+            raise ValueError(f"Jednostka '{kod}' nie istnieje")
+
+        del jednostki[kod]
+
+        for kategoria in ('uszlachetnienia', 'obrobka'):
+            for dane in self.slowniki.get(kategoria, {}).values():
+                if dane.get('kod_jednostki') == kod:
+                    dane.pop('kod_jednostki', None)
+
+        self._mapuj_jednostki_na_kody()
+        self._zapisz_zmiane('jednostki', 'usunięcie', kod)
+        self.zapisz_slowniki()
+
+        return True
+
+    def _uzupelnij_domyslne_slowniki(self, dane: Dict[str, Any], defaults: Dict[str, Any]) -> Dict[str, Any]:
+        """Uzupełnij brakujące sekcje słowników wartościami domyślnymi"""
+        if dane is None:
+            dane = {}
+
+        for klucz, wartosc in defaults.items():
+            if klucz not in dane or dane[klucz] in (None, {}):
+                dane[klucz] = copy.deepcopy(wartosc)
+
+        return dane
+
+    def _mapuj_jednostki_na_kody(self) -> None:
+        """Uzupełnij rekordy o kod jednostki oraz typ na podstawie słownika jednostek"""
+        jednostki = self.slowniki.get('jednostki', {})
+        if not isinstance(jednostki, dict) or not jednostki:
+            return
+
+        for kategoria in ('uszlachetnienia', 'obrobka'):
+            for dane in self.slowniki.get(kategoria, {}).values():
+                self._dopasuj_i_uzupelnij_jednostke(dane, jednostki)
+
+    def _dopasuj_i_uzupelnij_jednostke(self, rekord: Dict[str, Any], jednostki: Dict[str, Any]) -> None:
+        if not isinstance(rekord, dict):
+            return
+
+        definicja = None
+        kod = rekord.get('kod_jednostki')
+        if kod and kod in jednostki:
+            definicja = jednostki[kod]
+        else:
+            definicja = self._dopasuj_jednostke_po_stringu(jednostki, rekord.get('jednostka'))
+            if definicja:
+                rekord['kod_jednostki'] = definicja['kod']
+
+        if definicja:
+            rekord['typ_jednostki'] = definicja.get('typ_jednostki', rekord.get('typ_jednostki'))
+            if not rekord.get('jednostka'):
+                rekord['jednostka'] = definicja.get('etykieta', rekord.get('jednostka'))
+
+    def _pobierz_definicje_jednostki(self, kod: Optional[str], jednostka: Optional[str]) -> Optional[Dict[str, Any]]:
+        jednostki = self.slowniki.get('jednostki', {})
+        if not isinstance(jednostki, dict) or not jednostki:
+            return None
+
+        if kod:
+            kod_norm = kod.strip().upper()
+            definicja = jednostki.get(kod_norm)
+            if definicja:
+                return definicja
+
+        return self._dopasuj_jednostke_po_stringu(jednostki, jednostka)
+
+    @staticmethod
+    def _dopasuj_jednostke_po_stringu(jednostki: Dict[str, Any], jednostka_str: Optional[str]) -> Optional[Dict[str, Any]]:
+        if not jednostka_str:
+            return None
+
+        tekst = jednostka_str.lower()
+        for definicja in jednostki.values():
+            for slowo in definicja.get('slowa_kluczowe', []):
+                if slowo.lower() in tekst:
+                    return definicja
+        return None
     
     # ==================== PAPIERY ====================
     
@@ -155,19 +371,28 @@ class SlownikiManager:
     
     # ==================== USZLACHETNIENIA ====================
     
-    def dodaj_uszlachetnienie(self, nazwa: str, typ: str, cena_pln: float, 
+    def dodaj_uszlachetnienie(self, nazwa: str, typ: str, cena_pln: float,
                               jednostka: str = '1000 ark', opis: str = '',
-                              typ_jednostki: str = 'sztukowa') -> Dict:
+                              typ_jednostki: str = 'sztukowa',
+                              kod_jednostki: Optional[str] = None) -> Dict:
         """Dodaj nowe uszlachetnienie"""
         if nazwa in self.slowniki['uszlachetnienia']:
             raise ValueError(f"Uszlachetnienie '{nazwa}' już istnieje")
-        
+
         if cena_pln <= 0:
             raise ValueError("Cena musi być dodatnia")
-        
+
         if typ not in ['UV', 'Dyspersyjny', 'Folia', 'Tłoczenie']:
             raise ValueError(f"Nieprawidłowy typ: {typ}")
-        
+
+        definicja_jednostki = self._pobierz_definicje_jednostki(kod_jednostki, jednostka)
+        if definicja_jednostki:
+            kod_jednostki = definicja_jednostki['kod']
+            jednostka = definicja_jednostki.get('etykieta', jednostka)
+            typ_jednostki = definicja_jednostki.get('typ_jednostki', typ_jednostki)
+        elif kod_jednostki:
+            kod_jednostki = kod_jednostki.strip().upper()
+
         self.slowniki['uszlachetnienia'][nazwa] = {
             'typ': typ,
             'cena_pln': cena_pln,
@@ -175,20 +400,25 @@ class SlownikiManager:
             'typ_jednostki': typ_jednostki,
             'opis': opis
         }
-        
+
+        if kod_jednostki:
+            self.slowniki['uszlachetnienia'][nazwa]['kod_jednostki'] = kod_jednostki
+
         self._zapisz_zmiane('uszlachetnienia', 'dodanie', nazwa)
+        self._mapuj_jednostki_na_kody()
         self.zapisz_slowniki()
-        
+
         return self.slowniki['uszlachetnienia'][nazwa]
-    
+
     def edytuj_uszlachetnienie(self, stara_nazwa: str, nowa_nazwa: str = None,
                                 typ: str = None, cena_pln: float = None,
                                 jednostka: str = None, opis: str = None,
-                                typ_jednostki: str = None) -> Dict:
+                                typ_jednostki: str = None,
+                                kod_jednostki: Optional[str] = None) -> Dict:
         """Edytuj uszlachetnienie"""
         if stara_nazwa not in self.slowniki['uszlachetnienia']:
             raise ValueError(f"Uszlachetnienie '{stara_nazwa}' nie istnieje")
-        
+
         uszl = self.slowniki['uszlachetnienia'][stara_nazwa]
         
         # Zmiana nazwy
@@ -212,10 +442,23 @@ class SlownikiManager:
             uszl['typ_jednostki'] = typ_jednostki
         if opis is not None:
             uszl['opis'] = opis
-        
+        if kod_jednostki is not None:
+            kod_norm = kod_jednostki.strip().upper()
+            if kod_norm:
+                uszl['kod_jednostki'] = kod_norm
+            else:
+                uszl.pop('kod_jednostki', None)
+
+        definicja_jednostki = self._pobierz_definicje_jednostki(uszl.get('kod_jednostki'), uszl.get('jednostka'))
+        if definicja_jednostki:
+            uszl['kod_jednostki'] = definicja_jednostki['kod']
+            uszl['jednostka'] = definicja_jednostki.get('etykieta', uszl.get('jednostka'))
+            uszl['typ_jednostki'] = definicja_jednostki.get('typ_jednostki', uszl.get('typ_jednostki'))
+
         self._zapisz_zmiane('uszlachetnienia', 'edycja', stara_nazwa)
+        self._mapuj_jednostki_na_kody()
         self.zapisz_slowniki()
-        
+
         return uszl
     
     def usun_uszlachetnienie(self, nazwa: str) -> bool:
@@ -232,33 +475,47 @@ class SlownikiManager:
     # ==================== OBRÓBKA ====================
     
     def dodaj_obrobke(self, nazwa: str, cena_pln: float, jednostka: str = '1000 szt',
-                      opis: str = '', typ_jednostki: str = 'sztukowa') -> Dict:
+                      opis: str = '', typ_jednostki: str = 'sztukowa',
+                      kod_jednostki: Optional[str] = None) -> Dict:
         """Dodaj nową operację obróbki"""
         if nazwa in self.slowniki['obrobka']:
             raise ValueError(f"Obróbka '{nazwa}' już istnieje")
-        
+
         if cena_pln <= 0:
             raise ValueError("Cena musi być dodatnia")
-        
+
+        definicja_jednostki = self._pobierz_definicje_jednostki(kod_jednostki, jednostka)
+        if definicja_jednostki:
+            kod_jednostki = definicja_jednostki['kod']
+            jednostka = definicja_jednostki.get('etykieta', jednostka)
+            typ_jednostki = definicja_jednostki.get('typ_jednostki', typ_jednostki)
+        elif kod_jednostki:
+            kod_jednostki = kod_jednostki.strip().upper()
+
         self.slowniki['obrobka'][nazwa] = {
             'cena_pln': cena_pln,
             'jednostka': jednostka,
             'typ_jednostki': typ_jednostki,
             'opis': opis
         }
-        
+
+        if kod_jednostki:
+            self.slowniki['obrobka'][nazwa]['kod_jednostki'] = kod_jednostki
+
         self._zapisz_zmiane('obrobka', 'dodanie', nazwa)
+        self._mapuj_jednostki_na_kody()
         self.zapisz_slowniki()
-        
+
         return self.slowniki['obrobka'][nazwa]
-    
+
     def edytuj_obrobke(self, stara_nazwa: str, nowa_nazwa: str = None,
                        cena_pln: float = None, jednostka: str = None,
-                       opis: str = None, typ_jednostki: str = None) -> Dict:
+                       opis: str = None, typ_jednostki: str = None,
+                       kod_jednostki: Optional[str] = None) -> Dict:
         """Edytuj obróbkę"""
         if stara_nazwa not in self.slowniki['obrobka']:
             raise ValueError(f"Obróbka '{stara_nazwa}' nie istnieje")
-        
+
         obr = self.slowniki['obrobka'][stara_nazwa]
         
         # Zmiana nazwy
@@ -280,10 +537,23 @@ class SlownikiManager:
             obr['typ_jednostki'] = typ_jednostki
         if opis is not None:
             obr['opis'] = opis
-        
+        if kod_jednostki is not None:
+            kod_norm = kod_jednostki.strip().upper()
+            if kod_norm:
+                obr['kod_jednostki'] = kod_norm
+            else:
+                obr.pop('kod_jednostki', None)
+
+        definicja_jednostki = self._pobierz_definicje_jednostki(obr.get('kod_jednostki'), obr.get('jednostka'))
+        if definicja_jednostki:
+            obr['kod_jednostki'] = definicja_jednostki['kod']
+            obr['jednostka'] = definicja_jednostki.get('etykieta', obr.get('jednostka'))
+            obr['typ_jednostki'] = definicja_jednostki.get('typ_jednostki', obr.get('typ_jednostki'))
+
         self._zapisz_zmiane('obrobka', 'edycja', stara_nazwa)
+        self._mapuj_jednostki_na_kody()
         self.zapisz_slowniki()
-        
+
         return obr
     
     def usun_obrobke(self, nazwa: str) -> bool:
