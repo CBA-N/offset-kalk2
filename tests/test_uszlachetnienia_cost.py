@@ -63,23 +63,36 @@ class KalkulatorUszlachetnieniaTest(unittest.TestCase):
         obrobka_nazwa = 'Cięcie formatowe (standardowe)'
         dane_obrobki = self.manager.get_slownik('obrobka')[obrobka_nazwa]
 
-        wynik = self.kalkulator.kalkuluj_obrobke(
-            [obrobka_nazwa],
-            naklad=1000,
-            powierzchnia_arkusza=0.5,
-            ilosc_arkuszy=500,
-            waga_kg=0,
-        )
-
         match = re.search(r'([\d.,]+)', dane_obrobki.get('jednostka', '1000 ark'))
         wartosc_jednostki = float(match.group(1).replace(',', '.')) if match else 1000.0
-        oczekiwany_koszt = dane_obrobki['cena_pln'] * (500 / wartosc_jednostki)
-        self.assertAlmostEqual(
-            wynik['koszt'],
-            oczekiwany_koszt,
-            places=4,
-            msg='Koszt obróbki arkuszowej powinien skalować się względem arkuszy',
-        )
+
+        koszt_przygotowania = self.kalkulator.obrobka[obrobka_nazwa].get('koszt_przygotowania', 0)
+
+        scenariusze = [
+            {'naklad': 1000, 'ilosc_arkuszy': 500},
+            {'naklad': 5000, 'ilosc_arkuszy': 5000},
+        ]
+
+        for scenariusz in scenariusze:
+            wynik = self.kalkulator.kalkuluj_obrobke(
+                [obrobka_nazwa],
+                naklad=scenariusz['naklad'],
+                powierzchnia_arkusza=0.5,
+                ilosc_arkuszy=scenariusz['ilosc_arkuszy'],
+                waga_kg=0,
+            )
+
+            oczekiwany_koszt = (
+                dane_obrobki['cena_pln'] * (scenariusz['ilosc_arkuszy'] / wartosc_jednostki)
+                + koszt_przygotowania
+            )
+
+            self.assertAlmostEqual(
+                wynik['koszt'],
+                oczekiwany_koszt,
+                places=4,
+                msg='Koszt obróbki arkuszowej powinien skalować się względem arkuszy',
+            )
 
 
 if __name__ == '__main__':
