@@ -500,7 +500,27 @@ def generuj_pdf(oferta_id):
 @app.route('/api/historia', methods=['GET'])
 def get_historia():
     """API: Pobierz historię ofert"""
-    return jsonify(historia_mgr.pobierz_wszystkie())
+    oferty = historia_mgr.pobierz_wszystkie()
+
+    kontrahent_id = request.args.get('kontrahent_id')
+    kontrahent_nazwa = request.args.get('kontrahent_nazwa')
+
+    if kontrahent_id:
+        oferty = [
+            oferta for oferta in oferty
+            if str(oferta.get('kontrahent_id')) == str(kontrahent_id)
+        ]
+
+    if kontrahent_nazwa:
+        nazwa_normalized = kontrahent_nazwa.strip().lower()
+        oferty = [
+            oferta for oferta in oferty
+            if oferta.get('kontrahent')
+            and oferta['kontrahent'].get('nazwa')
+            and oferta['kontrahent']['nazwa'].strip().lower() == nazwa_normalized
+        ]
+
+    return jsonify(oferty)
 
 
 @app.route('/api/historia/<int:oferta_id>', methods=['GET'])
