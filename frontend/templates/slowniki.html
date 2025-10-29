@@ -533,7 +533,7 @@ function zapiszPapier(staraNazwa) {
             nazwa: nowaKategoriaNazwa,
             opis: nowaKategoriaOpis
         }, (response) => {
-            const nowaKategoriaId = response && response.data && response.data.nazwa ? response.data.nazwa : nowaKategoriaNazwa;
+            const nowaKategoriaId = (response && response.data && (response.data.id || response.data.nazwa)) || nowaKategoriaNazwa;
             zapiszPapierZKategoria(nowaKategoriaId);
         });
         return;

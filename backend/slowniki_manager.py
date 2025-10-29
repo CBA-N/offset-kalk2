@@ -31,6 +31,7 @@ class SlownikiManager:
         """Załaduj słowniki z pliku lub utwórz domyślne"""
         from slowniki_danych import (
             PAPIERY,
+            KATEGORIE_PAPIERU,
             USZLACHETNIENIA,
             OBROBKA_WYKONCZ,
             KOLORY_SPECJALNE,
@@ -47,6 +48,7 @@ class SlownikiManager:
 
         defaults = {
             "papiery": PAPIERY,
+            "kategorie_papieru": KATEGORIE_PAPIERU,
             "uszlachetnienia": USZLACHETNIENIA,
             "obrobka": OBROBKA_WYKONCZ,
             "kolory_specjalne": KOLORY_SPECJALNE,
@@ -291,7 +293,130 @@ class SlownikiManager:
                 if slowo.lower() in tekst:
                     return definicja
         return None
-    
+
+    # ==================== KATEGORIE PAPIERU ====================
+
+    def get_kategorie_papieru(self) -> Dict[str, Any]:
+        kategorie = self.slowniki.setdefault('kategorie_papieru', {})
+        if not isinstance(kategorie, dict):
+            kategorie = {}
+            self.slowniki['kategorie_papieru'] = kategorie
+        return kategorie
+
+    def dodaj_kategorie_papieru(self, nazwa: str, opis: str = '') -> Dict[str, Any]:
+        if not nazwa or not nazwa.strip():
+            raise ValueError("Nazwa kategorii jest wymagana")
+
+        nazwa = nazwa.strip()
+        opis = opis.strip() if opis else ''
+
+        kategorie = self.get_kategorie_papieru()
+        if nazwa in kategorie:
+            raise ValueError(f"Kategoria '{nazwa}' już istnieje")
+
+        rekord = {
+            'nazwa': nazwa,
+            'opis': opis
+        }
+        kategorie[nazwa] = rekord
+
+        self._zapisz_zmiane('kategorie_papieru', 'dodanie', nazwa)
+        self.zapisz_slowniki()
+
+        rekord_zwracany = {
+            'id': nazwa,
+            'nazwa': nazwa,
+            'opis': opis
+        }
+        return rekord_zwracany
+
+    def edytuj_kategorie_papieru(self, stara_nazwa: str, nowa_nazwa: Optional[str] = None,
+                                 opis: Optional[str] = None) -> Dict[str, Any]:
+        if not stara_nazwa or not stara_nazwa.strip():
+            raise ValueError("Nazwa kategorii do edycji jest wymagana")
+
+        stara_nazwa = stara_nazwa.strip()
+        kategorie = self.get_kategorie_papieru()
+
+        if stara_nazwa not in kategorie:
+            raise ValueError(f"Kategoria '{stara_nazwa}' nie istnieje")
+
+        rekord = kategorie[stara_nazwa]
+        docelowa_nazwa = stara_nazwa
+        zmiana_nazwy = False
+
+        if nowa_nazwa is not None:
+            nowa_nazwa = nowa_nazwa.strip()
+            if not nowa_nazwa:
+                raise ValueError("Nowa nazwa kategorii jest wymagana")
+            if nowa_nazwa != stara_nazwa and nowa_nazwa in kategorie:
+                raise ValueError(f"Kategoria '{nowa_nazwa}' już istnieje")
+
+            if nowa_nazwa != stara_nazwa:
+                kategorie[nowa_nazwa] = rekord
+                del kategorie[stara_nazwa]
+
+                for dane in self.slowniki.get('papiery', {}).values():
+                    if dane.get('kategoria') == stara_nazwa:
+                        dane['kategoria'] = nowa_nazwa
+
+                docelowa_nazwa = nowa_nazwa
+                zmiana_nazwy = True
+
+        if opis is not None:
+            rekord['opis'] = opis.strip()
+
+        if zmiana_nazwy:
+            rekord['nazwa'] = docelowa_nazwa
+        elif 'nazwa' not in rekord:
+            rekord['nazwa'] = docelowa_nazwa
+
+        opis_zmiany = f"{stara_nazwa} -> {docelowa_nazwa}" if zmiana_nazwy else stara_nazwa
+        self._zapisz_zmiane('kategorie_papieru', 'edycja', opis_zmiany)
+        self.zapisz_slowniki()
+
+        return {
+            'id': docelowa_nazwa,
+            'nazwa': rekord['nazwa'],
+            'opis': rekord.get('opis', '')
+        }
+
+    def usun_kategorie_papieru(self, nazwa: str) -> bool:
+        if not nazwa or not nazwa.strip():
+            raise ValueError("Nazwa kategorii do usunięcia jest wymagana")
+
+        nazwa = nazwa.strip()
+        kategorie = self.get_kategorie_papieru()
+
+        if nazwa not in kategorie:
+            raise ValueError(f"Kategoria '{nazwa}' nie istnieje")
+
+        powiazane = [p for p in self.slowniki.get('papiery', {}).values() if p.get('kategoria') == nazwa]
+        if powiazane:
+            raise ValueError("Nie można usunąć kategorii przypisanej do papierów")
+
+        del kategorie[nazwa]
+
+        self._zapisz_zmiane('kategorie_papieru', 'usunięcie', nazwa)
+        self.zapisz_slowniki()
+
+        return True
+
+    def _waliduj_kategorie_papieru(self, kategoria: Optional[str]) -> str:
+        if not kategoria or not str(kategoria).strip():
+            raise ValueError("Kategoria papieru jest wymagana")
+
+        kategoria = str(kategoria).strip()
+        kategorie = self.get_kategorie_papieru()
+        if kategoria in kategorie:
+            return kategoria
+
+        for istniejaca in kategorie.keys():
+            if istniejaca.lower() == kategoria.lower():
+                return istniejaca
+
+        raise ValueError(f"Kategoria papieru '{kategoria}' nie istnieje")
+
     # ==================== PAPIERY ====================
 
     def dodaj_papier(self, nazwa: str, gramatury: List[int], ceny: List[float],
@@ -300,7 +425,7 @@ class SlownikiManager:
         if nazwa in self.slowniki['papiery']:
             raise ValueError(f"Papier '{nazwa}' już istnieje")
 
-        self._waliduj_kategorie_papieru(kategoria)
+        kategoria_id = self._waliduj_kategorie_papieru(kategoria)
         
         if len(gramatury) != len(ceny):
             raise ValueError("Liczba gramatur musi być równa liczbie cen")
@@ -318,7 +443,7 @@ class SlownikiManager:
         self.slowniki['papiery'][nazwa] = {
             'gramatury': gramatury_sorted,
             'ceny': ceny_dict,
-            'kategoria': kategoria
+            'kategoria': kategoria_id
         }
         
         self._zapisz_zmiane('papiery', 'dodanie', nazwa)
@@ -358,8 +483,7 @@ class SlownikiManager:
 
         # Aktualizuj kategorię
         if kategoria is not None:
-            self._waliduj_kategorie_papieru(kategoria)
-            papier['kategoria'] = kategoria
+            papier['kategoria'] = self._waliduj_kategorie_papieru(kategoria)
         
         self._zapisz_zmiane('papiery', 'edycja', stara_nazwa)
         self.zapisz_slowniki()
