@@ -68,13 +68,67 @@ class SlownikiManager:
             try:
                 with open(self.plik_json, 'r', encoding='utf-8') as f:
                     dane = json.load(f)
-                    return self._uzupelnij_domyslne_slowniki(dane, defaults)
+                    dane = self._uzupelnij_domyslne_slowniki(dane, defaults)
+                    self._dopelnij_kategorie_na_podstawie_papierow(dane)
+                    return dane
             except Exception as e:
                 print(f"⚠️  Błąd wczytywania {self.plik_json}: {e}")
                 print("📦 Używam domyślnych wartości")
 
         # Domyślne wartości ze słowników
-        return {klucz: copy.deepcopy(wartosc) for klucz, wartosc in defaults.items()}
+        dane = {klucz: copy.deepcopy(wartosc) for klucz, wartosc in defaults.items()}
+        self._dopelnij_kategorie_na_podstawie_papierow(dane)
+        return dane
+
+    def _dopelnij_kategorie_na_podstawie_papierow(self, dane: Dict[str, Any]) -> None:
+        """Dodaj brakujące kategorie papieru wykorzystywane przez papiery."""
+        if dane is None:
+            return
+
+        papiery = dane.get('papiery', {})
+        if not isinstance(papiery, dict) or not papiery:
+            return
+
+        kategorie = dane.get('kategorie_papieru')
+        if not isinstance(kategorie, dict):
+            kategorie = {}
+            dane['kategorie_papieru'] = kategorie
+            self._migracje_wymagaja_zapisu = True
+
+        for rekord in papiery.values():
+            if not isinstance(rekord, dict):
+                continue
+            kat_id = rekord.get('kategoria')
+            if not kat_id:
+                continue
+            kat_id = str(kat_id).strip()
+            if not kat_id:
+                continue
+            if kat_id in kategorie:
+                continue
+
+            kategorie[kat_id] = {
+                'nazwa': self._formatuj_nazwe_kategorii(kat_id),
+                'opis': ''
+            }
+            self._migracje_wymagaja_zapisu = True
+
+    @staticmethod
+    def _formatuj_nazwe_kategorii(kategoria_id: str) -> str:
+        """Zwróć domyślną etykietę dla kategorii papieru."""
+        if not kategoria_id:
+            return 'Inne'
+
+        kategoria_id = str(kategoria_id).strip()
+        specjalne = {
+            'etykietowy': 'Papier etykietowy',
+            'inne': 'Inne'
+        }
+
+        if kategoria_id in specjalne:
+            return specjalne[kategoria_id]
+
+        return kategoria_id.replace('_', ' ').title()
     
     def zapisz_slowniki(self) -> bool:
         """Zapisz słowniki do pliku JSON"""
