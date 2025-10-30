@@ -73,7 +73,15 @@ echo "======================================"
 echo "🚀 Uruchamiam serwer Flask..."
 echo "======================================"
 echo ""
-echo "📍 Adres: http://127.0.0.1:5000"
+PROTOCOL="http"
+if [[ -n "$FLASK_SSL_CERT" && -n "$FLASK_SSL_KEY" ]]; then
+    PROTOCOL="https"
+    echo "🔐 HTTPS aktywny (użyto FLASK_SSL_CERT oraz FLASK_SSL_KEY)"
+elif [[ -n "$FLASK_SSL_CERT" || -n "$FLASK_SSL_KEY" ]]; then
+    echo "⚠️  HTTPS wymaga ustawienia obu zmiennych: FLASK_SSL_CERT oraz FLASK_SSL_KEY"
+fi
+
+echo "📍 Adres: ${PROTOCOL}://127.0.0.1:7018"
 echo "🛑 Zatrzymaj: Ctrl+C"
 echo ""
 echo "======================================"
