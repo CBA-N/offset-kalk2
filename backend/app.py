@@ -775,15 +775,43 @@ if __name__ == '__main__':
     # Utwórz folder templates jeśli nie istnieje
     os.makedirs('templates', exist_ok=True)
     os.makedirs('static', exist_ok=True)
-    
+
+    cert_path = os.getenv('FLASK_SSL_CERT')
+    key_path = os.getenv('FLASK_SSL_KEY')
+    ssl_context = None
+
+    if cert_path or key_path:
+        if not cert_path or not key_path:
+            print("\n⚠️  Podano tylko jeden z plików certyfikatu SSL. Ustaw zarówno FLASK_SSL_CERT jak i FLASK_SSL_KEY, aby uruchomić HTTPS.")
+        else:
+            cert_abspath = os.path.abspath(cert_path)
+            key_abspath = os.path.abspath(key_path)
+            if not os.path.isfile(cert_abspath):
+                print(f"\n⚠️  Nie znaleziono pliku certyfikatu SSL: {cert_abspath}")
+            elif not os.path.isfile(key_abspath):
+                print(f"\n⚠️  Nie znaleziono pliku klucza SSL: {key_abspath}")
+            elif not cert_abspath.lower().endswith('.pem'):
+                print(f"\n⚠️  Certyfikat SSL musi być w formacie .pem (aktualnie: {cert_abspath})")
+            elif not key_abspath.lower().endswith('.pem'):
+                print(f"\n⚠️  Klucz SSL musi być w formacie .pem (aktualnie: {key_abspath})")
+            else:
+                ssl_context = (cert_abspath, key_abspath)
+
+    protokol = 'https' if ssl_context else 'http'
+    bazowy_adres = f"{protokol}://127.0.0.1:7018"
+
     print("\n" + "="*60)
     print("🖨️  KALKULATOR DRUKU OFFSETOWEGO - WERSJA WEBOWA")
     print("="*60)
-    print("\n📍 Serwer działa na: http://127.0.0.1:7018")
+    print(f"\n📍 Serwer działa na: {bazowy_adres}")
     print("\n🔗 Dostępne strony:")
-    print("   • Kalkulator:  http://127.0.0.1:7018/")
-    print("   • Słowniki:    http://127.0.0.1:7018/slowniki")
-    print("   • Historia:    http://127.0.0.1:7018/historia")
+    print(f"   • Kalkulator:  {bazowy_adres}/")
+    print(f"   • Słowniki:    {bazowy_adres}/slowniki")
+    print(f"   • Historia:    {bazowy_adres}/historia")
+    if ssl_context:
+        print("\n🔐 HTTPS aktywny (użyto wartości z FLASK_SSL_CERT i FLASK_SSL_KEY)")
+    else:
+        print("\nℹ️  HTTPS nieaktywne. Aby włączyć, ustaw zmienne środowiskowe FLASK_SSL_CERT i FLASK_SSL_KEY wskazujące na pliki w formacie PEM.")
     print("\n💡 Naciśnij Ctrl+C aby zatrzymać serwer\n")
-    
-    app.run(debug=True, host='0.0.0.0', port=7018)
+
+    app.run(debug=True, host='0.0.0.0', port=7018, ssl_context=ssl_context)

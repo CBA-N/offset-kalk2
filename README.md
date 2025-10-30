@@ -25,6 +25,26 @@ Aplikacja uruchomi się na: **http://127.0.0.1:7018**
 
 ---
 
+### 🔒 HTTPS (opcjonalnie)
+
+Aby uruchomić aplikację z własnym certyfikatem SSL:
+
+```bash
+mkdir -p cert
+cp /ścieżka/do/twojego_certyfikatu.pem cert/cert.pem
+cp /ścieżka/do/twojego_klucza.pem cert/key.pem
+
+export FLASK_SSL_CERT="$(pwd)/cert/cert.pem"
+export FLASK_SSL_KEY="$(pwd)/cert/key.pem"
+python3 backend/app.py
+```
+
+> 🔐 **Ważne:** zarówno certyfikat, jak i klucz muszą być w formacie `.pem`.
+
+Jeśli obie zmienne są ustawione i wskazują na istniejące pliki `.pem`, serwer będzie dostępny pod adresem **https://127.0.0.1:7018**.
+
+---
+
 ## 📂 STRUKTURA PROJEKTU
 
 ```
