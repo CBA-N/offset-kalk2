@@ -317,6 +317,8 @@ $(document).ready(function() {
     let gramaturyCache = {};
     let aktualneKategorie = [];
     let papieryPromise = null;
+    let oczekujacyPapierDoPrzywrocenia = null;
+    let przywracaniePapieruTrwa = false;
 
     function pobierzDomyslnaIloscForm(definicja) {
         if (!definicja) return 1;
@@ -675,6 +677,60 @@ $(document).ready(function() {
             .prop('disabled', true);
     }
 
+    async function przywrocPapierZFormularza(kategoria, rodzaj, gramatura) {
+        const wybranaKategoria = kategoria || '';
+        const wybranyRodzaj = rodzaj || '';
+        const wybranaGramatura = (gramatura !== undefined && gramatura !== null && gramatura !== '')
+            ? String(gramatura)
+            : '';
+
+        if (!wybranaKategoria) {
+            $('#kategoriaPapieru').val('');
+            resetRodzajPapieruSelect();
+            resetGramaturaSelect();
+            return true;
+        }
+
+        if (!papieryData || !papieryData[wybranaKategoria]) {
+            return false;
+        }
+
+        $('#kategoriaPapieru').val(wybranaKategoria);
+        const ustawionoRodzaj = wypelnijRodzajePapieru(wybranaKategoria, wybranyRodzaj);
+
+        if (wybranyRodzaj) {
+            if (!ustawionoRodzaj) {
+                return false;
+            }
+            await pobierzGramatury(wybranyRodzaj, wybranaGramatura || null);
+        } else {
+            resetGramaturaSelect();
+        }
+
+        if (wybranaGramatura) {
+            $('#gramatura').val(wybranaGramatura);
+        }
+
+        return true;
+    }
+
+    async function sprobujPrzywrocicPapierJesliOczekuje() {
+        if (!oczekujacyPapierDoPrzywrocenia || przywracaniePapieruTrwa) {
+            return;
+        }
+
+        przywracaniePapieruTrwa = true;
+        try {
+            const dane = { ...oczekujacyPapierDoPrzywrocenia };
+            const udalo = await przywrocPapierZFormularza(dane.kategoria, dane.rodzaj, dane.gramatura);
+            if (udalo) {
+                oczekujacyPapierDoPrzywrocenia = null;
+            }
+        } finally {
+            przywracaniePapieruTrwa = false;
+        }
+    }
+
     function resetGramaturaSelect() {
         $('#gramatura')
             .html('<option value="">-- Wybierz papier --</option>')
@@ -822,6 +878,7 @@ $(document).ready(function() {
                 resetRodzajPapieruSelect();
                 resetGramaturaSelect();
             }
+            sprobujPrzywrocicPapierJesliOczekuje();
         }
 
         return new Promise((resolve) => {
@@ -829,6 +886,7 @@ $(document).ready(function() {
                 papieryData = data.papiery || {};
                 aktualneKategorie = data.kategorie || [];
                 wypelnijKategorieSelect(aktualneKategorie);
+                sprobujPrzywrocicPapierJesliOczekuje();
                 zapiszPapierCache({
                     kategorie: aktualneKategorie,
                     papiery: papieryData,
@@ -1189,19 +1247,21 @@ $(document).ready(function() {
             if (formData.format_szerokosc !== undefined) $('[name="format_szerokosc"]').val(formData.format_szerokosc);
             if (formData.format_wysokosc !== undefined) $('[name="format_wysokosc"]').val(formData.format_wysokosc);
 
-            if (formData.kategoria_papieru && papieryData[formData.kategoria_papieru]) {
-                $('#kategoriaPapieru').val(formData.kategoria_papieru);
-                wypelnijRodzajePapieru(formData.kategoria_papieru, formData.rodzaj_papieru || '');
-                if (formData.rodzaj_papieru) {
-                    $('#rodzajPapieru').val(formData.rodzaj_papieru);
-                    await pobierzGramatury(formData.rodzaj_papieru, formData.gramatura || null);
-                } else {
-                    resetGramaturaSelect();
-                }
-            } else {
-                $('#kategoriaPapieru').val('');
-                resetRodzajPapieruSelect();
-                resetGramaturaSelect();
+            const papierDoPrzywrocenia = {
+                kategoria: formData.kategoria_papieru || '',
+                rodzaj: formData.rodzaj_papieru || '',
+                gramatura: formData.gramatura || ''
+            };
+
+            const przywroconoPapier = await przywrocPapierZFormularza(
+                papierDoPrzywrocenia.kategoria,
+                papierDoPrzywrocenia.rodzaj,
+                papierDoPrzywrocenia.gramatura
+            );
+
+            if (!przywroconoPapier && papierDoPrzywrocenia.kategoria) {
+                oczekujacyPapierDoPrzywrocenia = papierDoPrzywrocenia;
+                sprobujPrzywrocicPapierJesliOczekuje();
             }
 
             if (formData.ilosc_form) {
