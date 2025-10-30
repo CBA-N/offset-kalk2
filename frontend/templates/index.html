@@ -320,6 +320,7 @@ $(document).ready(function() {
     let papieryPromise = null;
     let oczekujacyPapierDoPrzywrocenia = null;
     let przywracaniePapieruTrwa = false;
+    let oczekujacyKontrahentId = null;
 
     const zapamietanyPapierPrzyStarcie = odczytajWyborPapieruZCache();
     if (zapamietanyPapierPrzyStarcie) {
@@ -481,15 +482,72 @@ $(document).ready(function() {
     };
 
     // === ŁADOWANIE KONTRAHENTÓW ===
+    function ustawKontrahentaZCache(kontrahentId) {
+        const $select = $('#kontrahent_id');
+        if (!$select.length) {
+            oczekujacyKontrahentId = (kontrahentId !== undefined && kontrahentId !== null && kontrahentId !== '')
+                ? String(kontrahentId)
+                : null;
+            return false;
+        }
+
+        const normalizedId = (kontrahentId !== undefined && kontrahentId !== null && kontrahentId !== '')
+            ? String(kontrahentId)
+            : '';
+
+        if (!normalizedId) {
+            if ($select.val() !== '') {
+                $select.val('');
+            }
+            $select.trigger('change');
+            oczekujacyKontrahentId = null;
+            return true;
+        }
+
+        const optionExists = $select.find('option').filter(function() {
+            return $(this).val() === normalizedId;
+        }).length > 0;
+
+        if (optionExists) {
+            if ($select.val() !== normalizedId) {
+                $select.val(normalizedId);
+            }
+            $select.trigger('change');
+            oczekujacyKontrahentId = null;
+            return true;
+        }
+
+        oczekujacyKontrahentId = normalizedId;
+        return false;
+    }
+
     function zaladujKontrahentow() {
         $.get('/api/kontrahenci', function(response) {
             const $select = $('#kontrahent_id');
+            const previousValue = $select.val();
             $select.html('<option value="">-- Bez kontrahenta --</option>');
-            
+
             if (response.success && response.kontrahenci) {
                 response.kontrahenci.forEach(function(k) {
                     $select.append(`<option value="${k.id}">${k.nazwa} (${k.nip || 'brak NIP'})</option>`);
                 });
+            }
+
+            const docelowyKontrahent = (oczekujacyKontrahentId !== null && oczekujacyKontrahentId !== undefined)
+                ? oczekujacyKontrahentId
+                : previousValue;
+
+            if (docelowyKontrahent !== undefined && docelowyKontrahent !== null && docelowyKontrahent !== '') {
+                const ustawiono = ustawKontrahentaZCache(docelowyKontrahent);
+                if (!ustawiono) {
+                    $('#kontrahentPodglad').hide();
+                }
+            } else {
+                if ($select.val() !== '') {
+                    $select.val('');
+                }
+                $('#kontrahentPodglad').hide();
+                oczekujacyKontrahentId = null;
             }
         }).fail(function() {
             console.error('Błąd ładowania kontrahentów');
@@ -501,7 +559,9 @@ $(document).ready(function() {
     // === PODGLĄD KONTRAHENTA ===
     $('#kontrahent_id').change(function() {
         const kontrahentId = $(this).val();
-        
+
+        oczekujacyKontrahentId = kontrahentId ? String(kontrahentId) : null;
+
         if (!kontrahentId) {
             $('#kontrahentPodglad').hide();
             return;
@@ -651,6 +711,10 @@ $(document).ready(function() {
     $('.format-btn').click(function() {
         $('input[name="format_szerokosc"]').val($(this).data('w'));
         $('input[name="format_wysokosc"]').val($(this).data('h'));
+
+        if (!blokujAutoCache) {
+            zapiszFormularzDoCache();
+        }
     });
     
     // Dropdown rodzaju pracy - autofill wymiarów
@@ -674,6 +738,10 @@ $(document).ready(function() {
     // Szybkie przyciski marży
     $('.marza-btn').click(function() {
         $('input[name="marza_procent"]').val($(this).data('value'));
+
+        if (!blokujAutoCache) {
+            zapiszFormularzDoCache();
+        }
     });
     
     // === KASKADOWY WYBÓR PAPIERÓW (3 KROKI) ===
@@ -1240,8 +1308,7 @@ $(document).ready(function() {
             odwracankaBazowaLiczbaForm = null;
             aktualizujOdwracankaVisibility();
 
-            $('#kontrahent_id').val(defaultFormState.kontrahent_id || '');
-            $('#kontrahentPodglad').hide();
+            ustawKontrahentaZCache(defaultFormState.kontrahent_id || '');
 
             $('#wyniki').empty().hide();
             $('#loadingSpinner').hide();
@@ -1346,11 +1413,15 @@ $(document).ready(function() {
             if (formData.marza_procent !== undefined) $('[name="marza_procent"]').val(formData.marza_procent);
             if (formData.priorytet_optymalizacji !== undefined) $('[name="priorytet_optymalizacji"]').val(formData.priorytet_optymalizacji);
 
-            if (formData.kontrahent_id) {
-                $('#kontrahent_id').val(formData.kontrahent_id).trigger('change');
+            if (formData.kontrahent_id !== undefined) {
+                const ustawionoKontrahenta = ustawKontrahentaZCache(formData.kontrahent_id);
+                if (!ustawionoKontrahenta) {
+                    oczekujacyKontrahentId = (formData.kontrahent_id !== null && formData.kontrahent_id !== '')
+                        ? String(formData.kontrahent_id)
+                        : null;
+                }
             } else {
-                $('#kontrahent_id').val('');
-                $('#kontrahentPodglad').hide();
+                ustawKontrahentaZCache('');
             }
 
             $('input[name="kolory_specjalne"]').prop('checked', false);
