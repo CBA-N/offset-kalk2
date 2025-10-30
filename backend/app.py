@@ -28,17 +28,27 @@ app.config['SECRET_KEY'] = 'twoj-sekretny-klucz-zmien-w-produkcji'
 # Inicjalizacja kalkulatora
 kalkulator = KalkulatorDruku()
 
+# Ścieżki do katalogów danych (niezależne od bieżącego katalogu)
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.abspath(os.path.join(BACKEND_DIR, '..', 'data'))
+
+
+def _data_path(*segments: str) -> str:
+    """Zwróć ścieżkę do pliku w katalogu data."""
+    return os.path.join(DATA_DIR, *segments)
+
+
 # Menedżer słowników z trwałym zapisem
-slowniki_mgr = SlownikiManager(plik_json='../data/slowniki_data.json')
+slowniki_mgr = SlownikiManager(plik_json=_data_path('slowniki_data.json'))
 
 # Wstrzyknij aktualne słowniki do kalkulatora
 kalkulator = wstrzyknij_slowniki_do_kalkulatora(kalkulator, slowniki_mgr)
 
 # Manager historii ofert z trwałym zapisem
-historia_mgr = HistoriaManager(plik_json='../data/historia_ofert.json', limit=50)
+historia_mgr = HistoriaManager(plik_json=_data_path('historia_ofert.json'), limit=50)
 
 # Manager kontrahentów
-kontrahenci_mgr = KontrahenciManager(plik_json='../data/kontrahenci.json')
+kontrahenci_mgr = KontrahenciManager(plik_json=_data_path('kontrahenci.json'))
 
 # Klient API Białej Listy VAT
 vat_api = BialaListaVATClient()
@@ -323,7 +333,8 @@ def manage_slownik(kategoria, operacja):
                     dane['nazwa'],
                     dane['szerokosc'],
                     dane['wysokosc'],
-                    dane.get('opis', '')
+                    dane.get('opis', ''),
+                    dane.get('spad', 2.5)
                 )
             elif operacja == 'edytuj':
                 wynik = slowniki_mgr.edytuj_rodzaj_pracy(
@@ -331,7 +342,8 @@ def manage_slownik(kategoria, operacja):
                     dane.get('nowa_nazwa'),
                     dane.get('szerokosc'),
                     dane.get('wysokosc'),
-                    dane.get('opis')
+                    dane.get('opis'),
+                    dane.get('spad')
                 )
             elif operacja == 'usun':
                 wynik = slowniki_mgr.usun_rodzaj_pracy(dane['nazwa'])
@@ -474,6 +486,7 @@ def kalkuluj():
         zlecenie = {
             'nazwa_produktu': dane.get('nazwa_produktu', 'Bez nazwy'),
             'format_wydruku_mm': (int(dane['format_szerokosc']), int(dane['format_wysokosc'])),
+            'spad_mm': float(dane.get('spad_mm', 2.5)),
             'naklad': int(dane['naklad']),
             'rodzaj_papieru': dane['rodzaj_papieru'],
             'gramatura': int(dane['gramatura']),

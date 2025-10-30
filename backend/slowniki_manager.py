@@ -72,6 +72,7 @@ class SlownikiManager:
                     dane = json.load(f)
                     dane = self._uzupelnij_domyslne_slowniki(dane, defaults)
                     self._dopelnij_kategorie_na_podstawie_papierow(dane)
+                    self._dopelnij_spad_dla_rodzajow_prac(dane)
                     return dane
             except Exception as e:
                 print(f"⚠️  Błąd wczytywania {self.plik_json}: {e}")
@@ -80,7 +81,28 @@ class SlownikiManager:
         # Domyślne wartości ze słowników
         dane = {klucz: copy.deepcopy(wartosc) for klucz, wartosc in defaults.items()}
         self._dopelnij_kategorie_na_podstawie_papierow(dane)
+        self._dopelnij_spad_dla_rodzajow_prac(dane)
         return dane
+
+    def _dopelnij_spad_dla_rodzajow_prac(self, dane: Dict[str, Any]) -> None:
+        """Uzupełnij brakujący parametr spadu w rodzajach prac."""
+        if dane is None:
+            return
+
+        rodzaje = dane.get('rodzaje_prac')
+        if not isinstance(rodzaje, dict) or not rodzaje:
+            return
+
+        zaktualizowano = False
+        for definicja in rodzaje.values():
+            if not isinstance(definicja, dict):
+                continue
+            if 'spad' not in definicja:
+                definicja['spad'] = 2.5
+                zaktualizowano = True
+
+        if zaktualizowano:
+            self._migracje_wymagaja_zapisu = True
 
     def _dopelnij_kategorie_na_podstawie_papierow(self, dane: Dict[str, Any]) -> None:
         """Dodaj brakujące kategorie papieru wykorzystywane przez papiery."""
@@ -757,8 +779,8 @@ class SlownikiManager:
     
     # ==================== RODZAJE PRAC ====================
     
-    def dodaj_rodzaj_pracy(self, nazwa: str, szerokosc: int, wysokosc: int, 
-                           opis: str = '') -> Dict:
+    def dodaj_rodzaj_pracy(self, nazwa: str, szerokosc: int, wysokosc: int,
+                           opis: str = '', spad: float = 2.5) -> Dict:
         """Dodaj nowy rodzaj pracy (np. ulotka, wizytówka)"""
         if 'rodzaje_prac' not in self.slowniki:
             self.slowniki['rodzaje_prac'] = {}
@@ -768,11 +790,16 @@ class SlownikiManager:
         
         if szerokosc <= 0 or wysokosc <= 0:
             raise ValueError("Wymiary muszą być dodatnie")
-        
+
+        spad_wartosc = float(spad)
+        if spad_wartosc < 0:
+            raise ValueError("Spad nie może być ujemny")
+
         self.slowniki['rodzaje_prac'][nazwa] = {
             'szerokosc': int(szerokosc),
             'wysokosc': int(wysokosc),
-            'opis': opis
+            'opis': opis,
+            'spad': spad_wartosc
         }
         
         self._zapisz_zmiane('rodzaje_prac', 'dodanie', nazwa)
@@ -782,7 +809,7 @@ class SlownikiManager:
     
     def edytuj_rodzaj_pracy(self, stara_nazwa: str, nowa_nazwa: str = None,
                             szerokosc: int = None, wysokosc: int = None,
-                            opis: str = None) -> Dict:
+                            opis: str = None, spad: float = None) -> Dict:
         """Edytuj istniejący rodzaj pracy"""
         if 'rodzaje_prac' not in self.slowniki:
             self.slowniki['rodzaje_prac'] = {}
@@ -805,6 +832,12 @@ class SlownikiManager:
         
         if opis is not None:
             dane['opis'] = opis
+
+        if spad is not None:
+            spad_wartosc = float(spad)
+            if spad_wartosc < 0:
+                raise ValueError("Spad nie może być ujemny")
+            dane['spad'] = spad_wartosc
         
         # Zmień nazwę jeśli podano
         if nowa_nazwa and nowa_nazwa != stara_nazwa:

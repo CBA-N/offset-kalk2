@@ -1791,10 +1791,13 @@ function renderujRodzajePrac() {
 
     let rows = entries.map(([nazwa, dane]) => {
         const opis = dane.opis ? dane.opis : '<span class="text-muted">Brak</span>';
+        const spad = dane.spad !== undefined ? parseFloat(dane.spad) : 2.5;
+        const spadDisplay = Number.isFinite(spad) ? `${spad.toFixed(1)} mm` : '2.5 mm';
         return `
             <tr>
                 <td><i class="fas fa-tag me-1"></i>${nazwa}</td>
                 <td>${dane.szerokosc} × ${dane.wysokosc} mm</td>
+                <td>${spadDisplay}</td>
                 <td>${opis}</td>
                 <td class="text-end">
                     <div class="btn-group" role="group" aria-label="Akcje dla ${nazwa}">
@@ -1811,7 +1814,7 @@ function renderujRodzajePrac() {
     }).join('');
 
     if (!rows) {
-        rows = '<tr><td colspan="4" class="text-center text-muted">Brak zdefiniowanych rodzajów prac</td></tr>';
+        rows = '<tr><td colspan="5" class="text-center text-muted">Brak zdefiniowanych rodzajów prac</td></tr>';
     }
 
     const html = `
@@ -1821,6 +1824,7 @@ function renderujRodzajePrac() {
                     <tr>
                         <th>Nazwa</th>
                         <th>Wymiary</th>
+                        <th>Spad (mm)</th>
                         <th>Opis</th>
                         <th class="text-end">Akcje</th>
                     </tr>
@@ -1846,15 +1850,20 @@ function pokazFormularzRodzajuPracy(nazwa = null) {
                    ${nazwa ? 'disabled' : ''}>
         </div>
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
                 <label class="form-label">Szerokość (mm)</label>
-                <input type="number" class="form-control" id="rodzajSzerokosc" 
+                <input type="number" class="form-control" id="rodzajSzerokosc"
                        value="${dane.szerokosc || ''}" min="1">
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
                 <label class="form-label">Wysokość (mm)</label>
-                <input type="number" class="form-control" id="rodzajWysokosc" 
+                <input type="number" class="form-control" id="rodzajWysokosc"
                        value="${dane.wysokosc || ''}" min="1">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Domyślny spad (mm)</label>
+                <input type="number" class="form-control" id="rodzajSpad"
+                       value="${dane.spad !== undefined ? dane.spad : 2.5}" min="0" step="0.1">
             </div>
         </div>
         <div class="mb-3">
@@ -1877,6 +1886,7 @@ function zapiszRodzajPracy(staraNazwa) {
     const nazwa = staraNazwa || $('#rodzajNazwa').val().trim();
     const szerokosc = parseInt($('#rodzajSzerokosc').val());
     const wysokosc = parseInt($('#rodzajWysokosc').val());
+    const spad = parseFloat($('#rodzajSpad').val());
     const opis = $('#rodzajOpis').val().trim();
     
     if (!nazwa) {
@@ -1888,13 +1898,19 @@ function zapiszRodzajPracy(staraNazwa) {
         alert('Podaj poprawne wymiary (liczby dodatnie)');
         return;
     }
-    
+
+    if (isNaN(spad) || spad < 0) {
+        alert('Podaj poprawny spad (wartość nieujemna)');
+        return;
+    }
+
     const operacja = staraNazwa ? 'edytuj' : 'dodaj';
     const payload = {
         nazwa: nazwa,
         szerokosc: szerokosc,
         wysokosc: wysokosc,
-        opis: opis
+        opis: opis,
+        spad: spad
     };
     
     if (staraNazwa) {
