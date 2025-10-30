@@ -313,7 +313,7 @@ $(document).ready(function() {
 
     let odwracankaBazowaLiczbaForm = null;
     let programmaticFormChange = false;
-    let blokujAutoCache = false;
+    let blokujAutoCache = true;
     let papieryData = {};
     let gramaturyCache = {};
     let aktualneKategorie = [];
@@ -1458,7 +1458,14 @@ $(document).ready(function() {
     }
 
     // Wczytaj cache przy starcie po załadowaniu papierów
-    papieryPromise.then(() => wczytajFormularzZCache());
+    papieryPromise
+        .then(() => wczytajFormularzZCache())
+        .catch((err) => {
+            console.error('Błąd podczas wczytywania formularza z cache:', err);
+        })
+        .finally(() => {
+            blokujAutoCache = false;
+        });
 
     // Zapisuj przy każdej zmianie
     $('#kalkulatorForm input, #kalkulatorForm select').on('change input', function() {
