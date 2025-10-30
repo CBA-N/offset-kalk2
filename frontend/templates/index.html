@@ -308,6 +308,7 @@ const kolorystykiSlownik = {{ kolorystyki | tojson }};
 $(document).ready(function() {
     const FORM_CACHE_KEY = 'kalkulatorFormCache';
     const PAPER_CACHE_KEY = 'kalkulatorPapierCache';
+    const PAPER_SELECTION_KEY = 'kalkulatorPapierSelection';
     const PAPER_CACHE_TTL_MS = 1000 * 60 * 60; // 1 godzina
 
     let odwracankaBazowaLiczbaForm = null;
@@ -317,6 +318,13 @@ $(document).ready(function() {
     let gramaturyCache = {};
     let aktualneKategorie = [];
     let papieryPromise = null;
+    let oczekujacyPapierDoPrzywrocenia = null;
+    let przywracaniePapieruTrwa = false;
+
+    const zapamietanyPapierPrzyStarcie = odczytajWyborPapieruZCache();
+    if (zapamietanyPapierPrzyStarcie) {
+        oczekujacyPapierDoPrzywrocenia = { ...zapamietanyPapierPrzyStarcie };
+    }
 
     function pobierzDomyslnaIloscForm(definicja) {
         if (!definicja) return 1;
@@ -675,6 +683,66 @@ $(document).ready(function() {
             .prop('disabled', true);
     }
 
+    async function przywrocPapierZFormularza(kategoria, rodzaj, gramatura) {
+        const wybranaKategoria = kategoria || '';
+        const wybranyRodzaj = rodzaj || '';
+        const wybranaGramatura = (gramatura !== undefined && gramatura !== null && gramatura !== '')
+            ? String(gramatura)
+            : '';
+
+        if (!wybranaKategoria) {
+            $('#kategoriaPapieru').val('');
+            resetRodzajPapieruSelect();
+            resetGramaturaSelect();
+            return true;
+        }
+
+        if (!papieryData || !papieryData[wybranaKategoria]) {
+            return false;
+        }
+
+        $('#kategoriaPapieru').val(wybranaKategoria);
+        const ustawionoRodzaj = wypelnijRodzajePapieru(wybranaKategoria, wybranyRodzaj);
+
+        if (wybranyRodzaj) {
+            if (!ustawionoRodzaj) {
+                return false;
+            }
+            await pobierzGramatury(wybranyRodzaj, wybranaGramatura || null);
+        } else {
+            resetGramaturaSelect();
+        }
+
+        if (wybranaGramatura) {
+            $('#gramatura').val(wybranaGramatura);
+        }
+
+        zapiszWyborPapieruDoCache({
+            kategoria: $('#kategoriaPapieru').val() || '',
+            rodzaj: $('#rodzajPapieru').val() || '',
+            gramatura: $('#gramatura').val() || ''
+        });
+
+        return true;
+    }
+
+    async function sprobujPrzywrocicPapierJesliOczekuje() {
+        if (!oczekujacyPapierDoPrzywrocenia || przywracaniePapieruTrwa) {
+            return;
+        }
+
+        przywracaniePapieruTrwa = true;
+        try {
+            const dane = { ...oczekujacyPapierDoPrzywrocenia };
+            const udalo = await przywrocPapierZFormularza(dane.kategoria, dane.rodzaj, dane.gramatura);
+            if (udalo) {
+                oczekujacyPapierDoPrzywrocenia = null;
+            }
+        } finally {
+            przywracaniePapieruTrwa = false;
+        }
+    }
+
     function resetGramaturaSelect() {
         $('#gramatura')
             .html('<option value="">-- Wybierz papier --</option>')
@@ -716,6 +784,45 @@ $(document).ready(function() {
             localStorage.setItem(PAPER_CACHE_KEY, JSON.stringify(payload));
         } catch (e) {
             console.warn('Nie udało się zapisać cache papierów:', e);
+        }
+    }
+
+    function zapiszWyborPapieruDoCache(stan = null) {
+        const dane = stan || {
+            kategoria: $('#kategoriaPapieru').val() || '',
+            rodzaj: $('#rodzajPapieru').val() || '',
+            gramatura: $('#gramatura').val() || ''
+        };
+
+        try {
+            localStorage.setItem(PAPER_SELECTION_KEY, JSON.stringify(dane));
+        } catch (e) {
+            console.warn('Nie udało się zapisać wyboru papieru:', e);
+        }
+    }
+
+    function odczytajWyborPapieruZCache() {
+        try {
+            const raw = localStorage.getItem(PAPER_SELECTION_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            return {
+                kategoria: parsed.kategoria || '',
+                rodzaj: parsed.rodzaj || '',
+                gramatura: parsed.gramatura || ''
+            };
+        } catch (e) {
+            console.warn('Nie udało się odczytać wyboru papieru:', e);
+            return null;
+        }
+    }
+
+    function wyczyscWyborPapieruCache() {
+        try {
+            localStorage.removeItem(PAPER_SELECTION_KEY);
+        } catch (e) {
+            console.warn('Nie udało się wyczyścić wyboru papieru:', e);
         }
     }
 
@@ -822,6 +929,7 @@ $(document).ready(function() {
                 resetRodzajPapieruSelect();
                 resetGramaturaSelect();
             }
+            sprobujPrzywrocicPapierJesliOczekuje();
         }
 
         return new Promise((resolve) => {
@@ -829,6 +937,7 @@ $(document).ready(function() {
                 papieryData = data.papiery || {};
                 aktualneKategorie = data.kategorie || [];
                 wypelnijKategorieSelect(aktualneKategorie);
+                sprobujPrzywrocicPapierJesliOczekuje();
                 zapiszPapierCache({
                     kategorie: aktualneKategorie,
                     papiery: papieryData,
@@ -855,11 +964,18 @@ $(document).ready(function() {
     $('#kategoriaPapieru').change(function() {
         const kategoria = $(this).val();
         wypelnijRodzajePapieru(kategoria);
+        zapiszWyborPapieruDoCache();
     });
 
     $('#rodzajPapieru').change(function() {
         const rodzaj = $(this).val();
-        pobierzGramatury(rodzaj);
+        pobierzGramatury(rodzaj).then(() => {
+            zapiszWyborPapieruDoCache();
+        });
+    });
+
+    $('#gramatura').change(function() {
+        zapiszWyborPapieruDoCache();
     });
     
     // Obsługa formularza
@@ -1131,6 +1247,7 @@ $(document).ready(function() {
             $('#loadingSpinner').hide();
 
             localStorage.removeItem(FORM_CACHE_KEY);
+            wyczyscWyborPapieruCache();
         } finally {
             blokujAutoCache = false;
         }
@@ -1170,6 +1287,11 @@ $(document).ready(function() {
 
         try {
             localStorage.setItem(FORM_CACHE_KEY, JSON.stringify(formData));
+            zapiszWyborPapieruDoCache({
+                kategoria: formData.kategoria_papieru || '',
+                rodzaj: formData.rodzaj_papieru || '',
+                gramatura: formData.gramatura || ''
+            });
         } catch (e) {
             console.warn('Nie udało się zapisać cache formularza:', e);
         }
@@ -1189,19 +1311,25 @@ $(document).ready(function() {
             if (formData.format_szerokosc !== undefined) $('[name="format_szerokosc"]').val(formData.format_szerokosc);
             if (formData.format_wysokosc !== undefined) $('[name="format_wysokosc"]').val(formData.format_wysokosc);
 
-            if (formData.kategoria_papieru && papieryData[formData.kategoria_papieru]) {
-                $('#kategoriaPapieru').val(formData.kategoria_papieru);
-                wypelnijRodzajePapieru(formData.kategoria_papieru, formData.rodzaj_papieru || '');
-                if (formData.rodzaj_papieru) {
-                    $('#rodzajPapieru').val(formData.rodzaj_papieru);
-                    await pobierzGramatury(formData.rodzaj_papieru, formData.gramatura || null);
-                } else {
-                    resetGramaturaSelect();
-                }
-            } else {
-                $('#kategoriaPapieru').val('');
-                resetRodzajPapieruSelect();
-                resetGramaturaSelect();
+            const papierDoPrzywrocenia = {
+                kategoria: formData.kategoria_papieru || '',
+                rodzaj: formData.rodzaj_papieru || '',
+                gramatura: formData.gramatura || ''
+            };
+
+            if (papierDoPrzywrocenia.kategoria || papierDoPrzywrocenia.rodzaj || papierDoPrzywrocenia.gramatura) {
+                zapiszWyborPapieruDoCache(papierDoPrzywrocenia);
+            }
+
+            const przywroconoPapier = await przywrocPapierZFormularza(
+                papierDoPrzywrocenia.kategoria,
+                papierDoPrzywrocenia.rodzaj,
+                papierDoPrzywrocenia.gramatura
+            );
+
+            if (!przywroconoPapier && papierDoPrzywrocenia.kategoria) {
+                oczekujacyPapierDoPrzywrocenia = papierDoPrzywrocenia;
+                sprobujPrzywrocicPapierJesliOczekuje();
             }
 
             if (formData.ilosc_form) {
@@ -1265,6 +1393,23 @@ $(document).ready(function() {
     $('#kalkulatorForm input, #kalkulatorForm select').on('change input', function() {
         if (blokujAutoCache) return;
         zapiszFormularzDoCache();
+    });
+
+    $('a').on('click', function() {
+        if (blokujAutoCache) return;
+        zapiszFormularzDoCache();
+    });
+
+    $(document).on('visibilitychange', function() {
+        if (document.visibilityState === 'hidden' && !blokujAutoCache) {
+            zapiszFormularzDoCache();
+        }
+    });
+
+    $(window).on('beforeunload', function() {
+        if (!blokujAutoCache) {
+            zapiszFormularzDoCache();
+        }
     });
 
     // Opcjonalnie: wyczyść cache po udanej kalkulacji (wyłączone - zachowujemy dane)
