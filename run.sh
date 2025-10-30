@@ -59,6 +59,22 @@ for file in "${REQUIRED_FILES[@]}"; do
     fi
 done
 
+# Automatyczna konfiguracja ścieżek certyfikatów PEM
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CERT_DIR="$SCRIPT_DIR/cert"
+DEFAULT_CERT="$CERT_DIR/cert.pem"
+DEFAULT_KEY="$CERT_DIR/key.pem"
+
+if [[ -z "$FLASK_SSL_CERT" && -f "$DEFAULT_CERT" ]]; then
+    export FLASK_SSL_CERT="$DEFAULT_CERT"
+    echo "ℹ️  Wykryto certyfikat PEM: $FLASK_SSL_CERT"
+fi
+
+if [[ -z "$FLASK_SSL_KEY" && -f "$DEFAULT_KEY" ]]; then
+    export FLASK_SSL_KEY="$DEFAULT_KEY"
+    echo "ℹ️  Wykryto klucz PEM: $FLASK_SSL_KEY"
+fi
+
 # Przejście do katalogu backend
 cd backend
 
@@ -77,8 +93,10 @@ PROTOCOL="http"
 if [[ -n "$FLASK_SSL_CERT" && -n "$FLASK_SSL_KEY" ]]; then
     PROTOCOL="https"
     echo "🔐 HTTPS aktywny (użyto FLASK_SSL_CERT oraz FLASK_SSL_KEY)"
+    echo "   • Certyfikat: $FLASK_SSL_CERT"
+    echo "   • Klucz:      $FLASK_SSL_KEY"
 elif [[ -n "$FLASK_SSL_CERT" || -n "$FLASK_SSL_KEY" ]]; then
-    echo "⚠️  HTTPS wymaga ustawienia obu zmiennych: FLASK_SSL_CERT oraz FLASK_SSL_KEY"
+    echo "⚠️  HTTPS wymaga ustawienia obu zmiennych środowiskowych i plików w formacie PEM."
 fi
 
 echo "📍 Adres: ${PROTOCOL}://127.0.0.1:7018"

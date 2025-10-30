@@ -790,6 +790,10 @@ if __name__ == '__main__':
                 print(f"\n⚠️  Nie znaleziono pliku certyfikatu SSL: {cert_abspath}")
             elif not os.path.isfile(key_abspath):
                 print(f"\n⚠️  Nie znaleziono pliku klucza SSL: {key_abspath}")
+            elif not cert_abspath.lower().endswith('.pem'):
+                print(f"\n⚠️  Certyfikat SSL musi być w formacie .pem (aktualnie: {cert_abspath})")
+            elif not key_abspath.lower().endswith('.pem'):
+                print(f"\n⚠️  Klucz SSL musi być w formacie .pem (aktualnie: {key_abspath})")
             else:
                 ssl_context = (cert_abspath, key_abspath)
 
@@ -807,7 +811,7 @@ if __name__ == '__main__':
     if ssl_context:
         print("\n🔐 HTTPS aktywny (użyto wartości z FLASK_SSL_CERT i FLASK_SSL_KEY)")
     else:
-        print("\nℹ️  HTTPS nieaktywne. Aby włączyć, ustaw zmienne środowiskowe FLASK_SSL_CERT i FLASK_SSL_KEY.")
+        print("\nℹ️  HTTPS nieaktywne. Aby włączyć, ustaw zmienne środowiskowe FLASK_SSL_CERT i FLASK_SSL_KEY wskazujące na pliki w formacie PEM.")
     print("\n💡 Naciśnij Ctrl+C aby zatrzymać serwer\n")
 
     app.run(debug=True, host='0.0.0.0', port=7018, ssl_context=ssl_context)
