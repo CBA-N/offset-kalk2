@@ -6,7 +6,7 @@ Zautomatyzowany kalkulator z optymalizacją formatu
 import json
 import math
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, asdict
 from slowniki_danych import *
 
@@ -32,6 +32,8 @@ class KalkulacjaZlecenia:
     # Dane wejściowe
     nazwa_produktu: str
     format_wydruku_mm: Tuple[int, int]
+    format_wydruku_z_spadem_mm: Optional[Tuple[float, float]]
+    spad_mm: float
     naklad: int
     rodzaj_papieru: str
     gramatura: int
@@ -127,8 +129,8 @@ class KalkulatorDruku:
 
         self.ciecie_papieru = {}  # Konfiguracja cięcia (wstrzyknięta przez adapter)
         
-    def oblicz_uzytki_na_arkuszu(self, 
-                                  format_wydruku: Tuple[int, int],
+    def oblicz_uzytki_na_arkuszu(self,
+                                  format_wydruku: Tuple[float, float],
                                   format_arkusza: Tuple[int, int]) -> Dict:
         """
         Oblicza ile użytków zmieści się na arkuszu w obu orientacjach
@@ -142,13 +144,13 @@ class KalkulatorDruku:
         wysokosc_a_uzyteczna = wysokosc_a - margines
         
         # Orientacja pionowa wydruku
-        uzytki_pion_x = szerokosc_a_uzyteczna // szerokosc_w
-        uzytki_pion_y = wysokosc_a_uzyteczna // wysokosc_w
+        uzytki_pion_x = int(szerokosc_a_uzyteczna // szerokosc_w)
+        uzytki_pion_y = int(wysokosc_a_uzyteczna // wysokosc_w)
         uzytki_pion = uzytki_pion_x * uzytki_pion_y
-        
+
         # Orientacja pozioma wydruku (obrócony o 90°)
-        uzytki_poziom_x = szerokosc_a_uzyteczna // wysokosc_w
-        uzytki_poziom_y = wysokosc_a_uzyteczna // szerokosc_w
+        uzytki_poziom_x = int(szerokosc_a_uzyteczna // wysokosc_w)
+        uzytki_poziom_y = int(wysokosc_a_uzyteczna // szerokosc_w)
         uzytki_poziom = uzytki_poziom_x * uzytki_poziom_y
         
         # Wybierz lepszą orientację
@@ -180,12 +182,21 @@ class KalkulatorDruku:
                           naklad: int,
                           rodzaj_papieru: str,
                           gramatura: int,
-                          priorytet: str = 'Zrównoważony') -> List[FormatProposal]:
+                          priorytet: str = 'Zrównoważony',
+                          spad_mm: float = 0.0) -> List[FormatProposal]:
         """
         Analizuje wszystkie formaty i zwraca ranking propozycji
         """
         propozycje = []
-        
+
+        if spad_mm < 0:
+            raise ValueError("Spad nie może być ujemny")
+
+        format_wydruku_z_spadem = (
+            format_wydruku[0] + 2 * spad_mm,
+            format_wydruku[1] + 2 * spad_mm
+        )
+
         # Pobierz cenę papieru (klucz jako string dla kompatybilności z JSON)
         cena_kg = self.papiery[rodzaj_papieru]['ceny'][str(gramatura)]
         
@@ -198,9 +209,9 @@ class KalkulatorDruku:
         
         for nazwa_formatu, dane_formatu in self.formaty.items():
             format_ark = (dane_formatu['szerokosc_mm'], dane_formatu['wysokosc_mm'])
-            
+
             # Oblicz układ użytków
-            uklad = self.oblicz_uzytki_na_arkuszu(format_wydruku, format_ark)
+            uklad = self.oblicz_uzytki_na_arkuszu(format_wydruku_z_spadem, format_ark)
             
             if uklad['uzytki'] == 0:
                 continue  # Format za mały
@@ -705,6 +716,13 @@ class KalkulatorDruku:
         """
         # Parsowanie danych wejściowych
         format_mm = tuple(dane['format_wydruku_mm'])
+        spad_mm = float(dane.get('spad_mm', 2.5))
+        if spad_mm < 0:
+            raise ValueError("Spad nie może być ujemny")
+        format_mm_z_spadem = (
+            format_mm[0] + 2 * spad_mm,
+            format_mm[1] + 2 * spad_mm
+        )
         naklad = dane['naklad']
         rodzaj_papieru = dane['rodzaj_papieru']
         gramatura = dane['gramatura']
@@ -714,7 +732,7 @@ class KalkulatorDruku:
         
         # KROK 1: Optymalizacja formatu
         propozycje = self.optymalizuj_format(
-            format_mm, naklad, rodzaj_papieru, gramatura, priorytet
+            format_mm, naklad, rodzaj_papieru, gramatura, priorytet, spad_mm=spad_mm
         )
         
         if not propozycje:
@@ -802,6 +820,8 @@ class KalkulatorDruku:
         kalkulacja = KalkulacjaZlecenia(
             nazwa_produktu=dane.get('nazwa_produktu', 'Bez nazwy'),
             format_wydruku_mm=format_mm,
+            format_wydruku_z_spadem_mm=format_mm_z_spadem,
+            spad_mm=spad_mm,
             naklad=naklad,
             rodzaj_papieru=rodzaj_papieru,
             gramatura=gramatura,
@@ -850,7 +870,11 @@ def drukuj_oferte(kalkulacja: KalkulacjaZlecenia):
     print("="*80)
     
     print(f"\n📋 PRODUKT: {kalkulacja.nazwa_produktu}")
-    print(f"📏 Format: {kalkulacja.format_wydruku_mm[0]}×{kalkulacja.format_wydruku_mm[1]} mm")
+    print(f"📏 Format netto: {kalkulacja.format_wydruku_mm[0]}×{kalkulacja.format_wydruku_mm[1]} mm")
+    if kalkulacja.format_wydruku_z_spadem_mm:
+        szer_spad, wys_spad = kalkulacja.format_wydruku_z_spadem_mm
+        print(f"   • Spad: {kalkulacja.spad_mm:.1f} mm na stronę")
+        print(f"   • Format ze spadami: {szer_spad:.1f}×{wys_spad:.1f} mm")
     print(f"📦 Nakład: {kalkulacja.naklad} szt")
     
     print(f"\n📄 MATERIAŁ:")

@@ -2066,62 +2066,74 @@ RODZAJE_PRAC = {
     "Wizytówka standard": {
         "szerokosc": 90,
         "wysokosc": 50,
-        "opis": "Standardowa wizytówka 90×50 mm"
+        "opis": "Standardowa wizytówka 90×50 mm",
+        "spad": 2.5
     },
     "Ulotka A5": {
         "szerokosc": 148,
         "wysokosc": 210,
-        "opis": "Ulotka w formacie A5"
+        "opis": "Ulotka w formacie A5",
+        "spad": 2.5
     },
     "Ulotka A4": {
         "szerokosc": 210,
         "wysokosc": 297,
-        "opis": "Ulotka w formacie A4"
+        "opis": "Ulotka w formacie A4",
+        "spad": 2.5
     },
     "Plakat A3": {
         "szerokosc": 297,
         "wysokosc": 420,
-        "opis": "Plakat w formacie A3"
+        "opis": "Plakat w formacie A3",
+        "spad": 2.5
     },
     "Plakat A2": {
         "szerokosc": 420,
         "wysokosc": 594,
-        "opis": "Plakat w formacie A2"
+        "opis": "Plakat w formacie A2",
+        "spad": 2.5
     },
     "Etykieta mała": {
         "szerokosc": 100,
         "wysokosc": 70,
-        "opis": "Etykieta samoprzylepna 100×70 mm"
+        "opis": "Etykieta samoprzylepna 100×70 mm",
+        "spad": 2.5
     },
     "Etykieta średnia": {
         "szerokosc": 150,
         "wysokosc": 100,
-        "opis": "Etykieta samoprzylepna 150×100 mm"
+        "opis": "Etykieta samoprzylepna 150×100 mm",
+        "spad": 2.5
     },
     "Naklejka okrągła": {
         "szerokosc": 80,
         "wysokosc": 80,
-        "opis": "Naklejka okrągła śr. 80 mm"
+        "opis": "Naklejka okrągła śr. 80 mm",
+        "spad": 2.5
     },
     "Folder A4": {
         "szerokosc": 210,
         "wysokosc": 297,
-        "opis": "Folder jednoczęściowy A4"
+        "opis": "Folder jednoczęściowy A4",
+        "spad": 2.5
     },
     "Broszura A5": {
         "szerokosc": 148,
         "wysokosc": 210,
-        "opis": "Broszura w formacie A5"
+        "opis": "Broszura w formacie A5",
+        "spad": 2.5
     },
     "Katalog A4": {
         "szerokosc": 210,
         "wysokosc": 297,
-        "opis": "Katalog produktowy A4"
+        "opis": "Katalog produktowy A4",
+        "spad": 2.5
     },
     "Zaproszenie DL": {
         "szerokosc": 99,
         "wysokosc": 210,
-        "opis": "Zaproszenie format DL (1/3 A4)"
+        "opis": "Zaproszenie format DL (1/3 A4)",
+        "spad": 2.5
     }
 }
 

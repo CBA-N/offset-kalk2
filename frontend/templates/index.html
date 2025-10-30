@@ -35,7 +35,7 @@
                         <select class="form-select" id="rodzajPracy">
                             <option value="">-- Wybierz gotowy szablon lub wpisz wymiary ręcznie --</option>
                             {% for nazwa, dane in rodzaje_prac.items() %}
-                            <option value="{{ nazwa }}" data-w="{{ dane.szerokosc }}" data-h="{{ dane.wysokosc }}">
+                            <option value="{{ nazwa }}" data-w="{{ dane.szerokosc }}" data-h="{{ dane.wysokosc }}" data-spad="{{ dane.get('spad', 2.5) }}">
                                 {{ nazwa }} ({{ dane.szerokosc }}×{{ dane.wysokosc }} mm) - {{ dane.opis }}
                             </option>
                             {% endfor %}
@@ -44,13 +44,18 @@
                 </div>
                 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label class="form-label">Szerokość (mm)</label>
                         <input type="number" class="form-control" name="format_szerokosc" value="210" min="10" required>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label class="form-label">Wysokość (mm)</label>
                         <input type="number" class="form-control" name="format_wysokosc" value="297" min="10" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Spad (mm)</label>
+                        <input type="number" class="form-control" name="spad_mm" id="spadInput" value="2.5" min="0" step="0.1" required>
+                        <small class="text-muted">Domyślnie 2,5 mm na każdą krawędź.</small>
                     </div>
                 </div>
                 
@@ -467,6 +472,7 @@ $(document).ready(function() {
         naklad: $('[name="naklad"]').val(),
         format_szerokosc: $('[name="format_szerokosc"]').val(),
         format_wysokosc: $('[name="format_wysokosc"]').val(),
+        spad_mm: $('#spadInput').val() || '2.5',
         rodzaj_pracy: $('#rodzajPracy').val() || '',
         kategoria_papieru: $('#kategoriaPapieru').val() || '',
         rodzaj_papieru: $('#rodzajPapieru').val() || '',
@@ -599,7 +605,11 @@ $(document).ready(function() {
             $('input[name="format_szerokosc"]').val(urlParams.get('format_szerokosc'));
             $('input[name="format_wysokosc"]').val(urlParams.get('format_wysokosc'));
         }
-        
+
+        if (urlParams.has('spad_mm')) {
+            $('#spadInput').val(urlParams.get('spad_mm'));
+        }
+
         if (urlParams.has('naklad')) {
             $('#naklad').val(urlParams.get('naklad'));
         }
@@ -722,16 +732,21 @@ $(document).ready(function() {
         const selected = $(this).find(':selected');
         const w = selected.data('w');
         const h = selected.data('h');
-        
+        const spad = selected.data('spad');
+
         if (w && h) {
             $('input[name="format_szerokosc"]').val(w);
             $('input[name="format_wysokosc"]').val(h);
-            
+
             // Opcjonalnie: zaktualizuj nazwę produktu
             const rodzajNazwa = selected.val();
             if (rodzajNazwa && $('input[name="nazwa_produktu"]').val() === 'Mój wydruk') {
                 $('input[name="nazwa_produktu"]').val(rodzajNazwa);
             }
+        }
+
+        if (spad !== undefined && spad !== null && spad !== '') {
+            $('#spadInput').val(spad);
         }
     });
     
@@ -1114,6 +1129,17 @@ $(document).ready(function() {
     
     function wyswietlWynik(wynik) {
         const format = wynik.wybrany_format;
+        const spadValue = Number(wynik.spad_mm ?? 0);
+        const spadDisplay = Number.isFinite(spadValue) ? spadValue.toFixed(1) : '0.0';
+        let formatSpadDisplay = '—';
+        const formatSpadRaw = wynik.format_wydruku_z_spadem_mm;
+        if (Array.isArray(formatSpadRaw) && formatSpadRaw.length === 2) {
+            const szer = Number(formatSpadRaw[0]);
+            const wys = Number(formatSpadRaw[1]);
+            if (Number.isFinite(szer) && Number.isFinite(wys)) {
+                formatSpadDisplay = `${szer.toFixed(1)}×${wys.toFixed(1)} mm`;
+            }
+        }
 
         let html = `
             <h3 class="text-center mb-4"><i class="fas fa-check-circle text-success"></i> Oferta Wyceny</h3>
@@ -1170,6 +1196,14 @@ $(document).ready(function() {
                         <tr>
                             <td><strong>Format wydruku:</strong></td>
                             <td>${wynik.format_wydruku_mm[0]}×${wynik.format_wydruku_mm[1]} mm</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Spad:</strong></td>
+                            <td>${spadDisplay} mm na stronę</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Format ze spadami:</strong></td>
+                            <td>${formatSpadDisplay}</td>
                         </tr>
                         <tr>
                             <td><strong>Nakład:</strong></td>
@@ -1270,6 +1304,7 @@ $(document).ready(function() {
             $('input[name="naklad"]').val(defaultFormState.naklad);
             $('input[name="format_szerokosc"]').val(defaultFormState.format_szerokosc);
             $('input[name="format_wysokosc"]').val(defaultFormState.format_wysokosc);
+            $('#spadInput').val(defaultFormState.spad_mm || '2.5');
             $('#rodzajPracy').val(defaultFormState.rodzaj_pracy || '');
 
             if (defaultFormState.kategoria_papieru && papieryData[defaultFormState.kategoria_papieru]) {
@@ -1333,6 +1368,7 @@ $(document).ready(function() {
             rodzaj_pracy: $('#rodzajPracy').val(),
             format_szerokosc: $('[name="format_szerokosc"]').val(),
             format_wysokosc: $('[name="format_wysokosc"]').val(),
+            spad_mm: $('#spadInput').val(),
             kategoria_papieru: $('#kategoriaPapieru').val(),
             rodzaj_papieru: $('#rodzajPapieru').val(),
             gramatura: $('#gramatura').val(),
@@ -1377,6 +1413,7 @@ $(document).ready(function() {
             if (formData.rodzaj_pracy !== undefined) $('#rodzajPracy').val(formData.rodzaj_pracy);
             if (formData.format_szerokosc !== undefined) $('[name="format_szerokosc"]').val(formData.format_szerokosc);
             if (formData.format_wysokosc !== undefined) $('[name="format_wysokosc"]').val(formData.format_wysokosc);
+            if (formData.spad_mm !== undefined) $('#spadInput').val(formData.spad_mm);
 
             const papierDoPrzywrocenia = {
                 kategoria: formData.kategoria_papieru || '',
