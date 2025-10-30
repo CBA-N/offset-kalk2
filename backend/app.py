@@ -323,7 +323,8 @@ def manage_slownik(kategoria, operacja):
                     dane['nazwa'],
                     dane['szerokosc'],
                     dane['wysokosc'],
-                    dane.get('opis', '')
+                    dane.get('opis', ''),
+                    dane.get('spad', 2.5)
                 )
             elif operacja == 'edytuj':
                 wynik = slowniki_mgr.edytuj_rodzaj_pracy(
@@ -331,7 +332,8 @@ def manage_slownik(kategoria, operacja):
                     dane.get('nowa_nazwa'),
                     dane.get('szerokosc'),
                     dane.get('wysokosc'),
-                    dane.get('opis')
+                    dane.get('opis'),
+                    dane.get('spad')
                 )
             elif operacja == 'usun':
                 wynik = slowniki_mgr.usun_rodzaj_pracy(dane['nazwa'])
@@ -474,6 +476,7 @@ def kalkuluj():
         zlecenie = {
             'nazwa_produktu': dane.get('nazwa_produktu', 'Bez nazwy'),
             'format_wydruku_mm': (int(dane['format_szerokosc']), int(dane['format_wysokosc'])),
+            'spad_mm': float(dane.get('spad_mm', 2.5)),
             'naklad': int(dane['naklad']),
             'rodzaj_papieru': dane['rodzaj_papieru'],
             'gramatura': int(dane['gramatura']),
